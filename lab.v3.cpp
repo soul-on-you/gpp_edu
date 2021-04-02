@@ -10,11 +10,9 @@ using namespace std;
 template <typename Xtype>
 Xtype ElemSize(Xtype a)
 {
-    string temp;
     ostringstream ostr;
     ostr << a;
-    temp = ostr.str();
-    return temp.size();
+    return ostr.str().size();
 }
 string space(int a)
 {
@@ -147,8 +145,8 @@ int main()
                     file.seekg(pos);
                     file >> tempstr;
                     errlog<<"Найдена ошибка в элементе номер "<<all_numbers<<
-                    "\nАбсолютная позиция в файле "<<pos<<
-                    "\nНеверное значение: "<<tempstr<<"\n";
+                            "\nАбсолютная позиция в файле "<<pos<<
+                            "\nНеверное значение: "<<tempstr<<"\n";
                     }
                 }
                 else 
