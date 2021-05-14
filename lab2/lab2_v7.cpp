@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <fstream>
 #include <string>
-#include <string>
 #include <iomanip>
 #include <cmath>
 #include <limits>
