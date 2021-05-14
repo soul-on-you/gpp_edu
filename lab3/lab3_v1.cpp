@@ -1,4 +1,5 @@
 #define LINUX
+#define v1
 
 #include <iostream>
 #include <stdio.h>
@@ -27,90 +28,37 @@ size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
     return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
-
-void space(int needed, ostringstream& ostr)
+void MatrCout(d_arr** buf_d_arr, const int &bufstr, const int &bufcolomn)
 {
-    ostr << setw(needed) << setfill(' ') << "";
-}
-void assembly_stream(int num, const double& elem, ostringstream& number_stream, ostringstream& elem_stream)
-{
-    int differences = ElemSize(num) - ElemSize(elem);
-    if (number_stream.str().size() + abs(differences) > 80)
+    ostringstream numberstr("|   |", ostringstream::ate);
+    ostringstream skipstr("+---+", ostringstream::ate);
+    for (int j = 0; j < bufcolomn; j++)
     {
-        cout << number_stream.str() << '\n' << elem_stream.str() << '\n' << '\n';
-        number_stream.str("Номера  |");
-        elem_stream.str("Элемены |");
+        skipstr << setw(12) << setfill('-') << '+';
+        numberstr << setw(6 - ElemSize(j) / 2 - ElemSize(j) % 2) << "" << (j + 1) << setw(6 - ElemSize(j) / 2) << '|';
     }
-    if (differences > 0)
+    cout << '\n' << skipstr.str() << '\n' << numberstr.str() << '\n' << skipstr.str() << '\n';
+    for (int i = 0; i < bufstr; i++)
     {
-        number_stream << ' ' << num << " |";
-        space(1 + differences / 2 + differences % 2, elem_stream);
-        elem_stream << elem;
-        space(1 + differences / 2, elem_stream);
-        elem_stream << '|';
-    }
-    else if (differences == 0)
-    {
-        number_stream << ' ' << num << " |";
-        elem_stream << ' ' << elem << " |";
-    }
-    else
-    {
-        space(1 + abs(differences) / 2 + abs(differences) % 2, number_stream);
-        number_stream << num;
-        space(1 + abs(differences) / 2, number_stream);
-        number_stream << '|';
-        elem_stream << ' ' << elem << " |";
+        cout << "| " << (i + 1) << " |";
+        for (int j = 0; j < bufcolomn; j++)
+        {
+            cout << setw(10) << right << scientific << setprecision(2) <<*(*(buf_d_arr+i)+j) << " |";
+        }
+        cout << endl << skipstr.str() << '\n';
     }
 }
-
-#ifdef LINUX
-static struct termios old, newattr;
-void initTermios(int echo)
+void FReadMatr(ifstream &file, d_arr** buf_a_arr ,const int& bufstr, const int& bufcolomn)
 {
-    tcgetattr(0, &old);
-    newattr = old;
-    newattr.c_lflag &= ~ICANON;
-    newattr.c_lflag &= echo ? ECHO : ~ECHO;
-    tcsetattr(0, TCSANOW, &newattr);
+    int pos = file.tellg();
+    file.seekg(0, ios::beg);
+    for (int i = 0; i < bufstr; i++)
+        for (int j = 0; j < bufcolomn; j++)
+            file >> *(*(buf_a_arr + i) + j);
+    file.clear();
+    file.seekg(pos);
 }
-void resetTermios(void)
-{
-    tcsetattr(0, TCSANOW, &old);
-}
-char getch_(int echo)
-{
-    char ch;
-    initTermios(echo);
-    ch = getchar();
-    resetTermios();
-    return ch;
-}
-char getch(void)
-{
-    return getch_(0);
-}
-char getche(void)
-{
-    return getch_(1);
-}
-#endif
-char hotkey_to_char(int echo)
-{
-    char ch;
-#ifdef LINUX
-
-    if (echo)
-        ch = getche();
-    else
-        ch = getch();
-#else
-    ch = _getch();
-#endif
-    return ch;
-}
-
-void term_clear_screen() 
+void term_clear_screen()
 {
 #ifdef LINUX
     system("clear");
@@ -121,6 +69,157 @@ void term_clear_screen()
 
 int main()
 {
-    
+    d_arr** p_buf_double=nullptr;
+        setlocale(LC_ALL, "ru");
+    while (true)
+    {
+        ifstream file;
+        string FileAdress, tempstr;
+        cout << "\nВведите имя файла(чтобы выйти *): ";
+        getline(cin, FileAdress);
+        if (FileAdress == "*")
+            break;
+        file.open(FileAdress, ios_base::in);
+        if (!(file.is_open()))
+        {
+            perror(("\nОшибка открытия файла с именем " + FileAdress).c_str());
+            continue;
+        }
+        char err(0);
+        cout << '\n';
+        int pos = 0, dsize_s = 0, dsize_all_sim = 0, dsize_c = 0;
+        d_arr dtemp = 0;
+        bool power = true;
+
+        while (!(file >> ws).eof() && !err)
+        {
+            char tmp(0);
+            pos = file.tellg();
+            if (!(file >> dtemp) || (file.peek() != ' ' && file.peek() != '\n'
+                && file.peek() != '\t' && file.peek() != EOF))
+            {
+                err = 'f';
+                break;
+            }
+            dsize_c++;
+
+            while (tmp != EOF)
+            {
+                tmp = file.get();
+                switch (tmp)
+                {
+                case'\t':case' ':
+                    break;
+                case EOF:case'\n':
+                    if (dsize_c)
+                    {
+                        dsize_s++;
+                        dsize_all_sim += dsize_c;
+                        if (dsize_all_sim % dsize_c)
+                            err = 'c';
+                        if(tmp!=EOF)
+                            dsize_c = 0;
+                    }
+                    break;
+                default:
+                    file.unget();
+                    tmp = EOF;
+                }
+            }
+        }
+        if (err == 'f')
+        {
+            file.clear();
+            file.seekg(pos);
+            file >> tempstr;
+            file.close();
+            cout << "Найдена ошибка в элементе номер " << (dsize_c + 1) << " на строке " << (dsize_s + 1)
+                << "\nАбсолютная позиция в файле " << pos
+                << "\nНеверное значение: \"" << tempstr << '\"' << '\n';
+            cout << "\nФайл содержит некорректные значения\n";
+            continue;
+        }
+        if (!dsize_all_sim)
+        {
+            file.close();
+            cout << "\nВ файле не оказалось значений, которые можно считать\n";
+            continue;
+        }
+        if (err == 'c')
+        {
+            file.close();
+            cout << "\nНе правильный формат, количество элементов строки "<<dsize_s<<" не совпадает со стокой " <<(dsize_s-1)<<'\n';
+            continue;
+        }
+        if (dsize_s != dsize_c)
+        {
+            file.close();
+            cout << "\nНе правильный формат, матрица не кваратная\n";
+            continue;
+        }
+
+        p_buf_double = new(nothrow) d_arr* [dsize_s];
+        if (p_buf_double == nullptr)
+        {
+            file.close();
+            cout << "\nОшибка выделения оперативной памяти\n";
+            continue;
+        }
+        for (int i = 0; (0 <= i) && (i < dsize_c); i++)
+        {
+            *(p_buf_double+i) = new(nothrow) d_arr[dsize_c];
+            if (*(p_buf_double + i) == nullptr)
+            {
+                file.close();
+                cout << "\nОшибка выделения оперативной памяти\n";
+                for (i--; 0 <= i; i--)
+                {
+                    delete[] p_buf_double[i];
+                    *(p_buf_double + i) = nullptr;
+                }
+                delete[] p_buf_double;
+                p_buf_double = nullptr;
+            }
+        }
+
+        file.clear();
+        FReadMatr(file, p_buf_double, dsize_s, dsize_c);
+       /* file.seekg(0, ios::beg);
+        for(int i=0; i<dsize_s; i++)
+            for (int j = 0; j < dsize_c; j++)
+                file >> *(*(p_buf_double + i) + j);*/
+        MatrCout(p_buf_double, dsize_s, dsize_c);
+
+        for (int i = 0, j = 0; i < dsize_s; i++, j++)
+            if (*(*(p_buf_double + i) + j) < 0)
+            {
+                for (int k = 0; k < dsize_c; k++)
+                {
+                    if(k==j)
+                        continue;
+                    if (!(*(*p_buf_double + k)) && (*(*(p_buf_double + i) + k) > 0))
+                    {
+                        cout << "\nЗамена столбца " << (i + 1) << " на строку " << (k+1) << '\n';
+                        for (int l = 0; l < dsize_c; l++) //не квадратная тогда l<min(dsize_s, dsize_c)
+                        {
+                            //*(*(p_buf_double + i) + l) += *(*(p_buf_double + l) + k);
+                            //*(*(p_buf_double + l) + k) = *(*(p_buf_double + i) + l) - *(*(p_buf_double + l) + k);
+                            //*(*(p_buf_double + i) + l) -= *(*(p_buf_double + l) + k);
+                            dtemp = *(*(p_buf_double + i) + l);
+                            *(*(p_buf_double + i) + l) = *(*(p_buf_double + l) + k);
+                            *(*(p_buf_double + l) + k) = dtemp;
+                        }
+                        break;
+                    }
+                    if (dsize_c - 1 == k)
+                    {
+                        cout << "\nНеудалось найти замену для " << (i+1) << " строки\n";
+                    }
+
+                }
+               
+            }
+        MatrCout(p_buf_double, dsize_s, dsize_c);
+    }
     return 0;
 }
