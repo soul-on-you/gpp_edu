@@ -58,14 +58,6 @@ void FReadMatr(ifstream &file, d_arr** buf_a_arr ,const int& bufstr, const int& 
     file.clear();
     file.seekg(pos);
 }
-void term_clear_screen()
-{
-#ifdef LINUX
-    system("clear");
-#else
-    system("cls");
-#endif
-}
 
 int main()
 {
@@ -165,7 +157,7 @@ int main()
             cout << "\nОшибка выделения оперативной памяти\n";
             continue;
         }
-        for (int i = 0; (0 <= i) && (i < dsize_c); i++)
+        for (int i = 0; i < dsize_c ; i++)
         {
             *(p_buf_double+i) = new(nothrow) d_arr[dsize_c];
             if (*(p_buf_double + i) == nullptr)
@@ -174,17 +166,18 @@ int main()
                 cout << "\nОшибка выделения оперативной памяти\n";
                 for (i--; 0 <= i; i--)
                 {
-                    delete[] p_buf_double[i];
+                    delete[] p_buf_double[i]; // или *(p_buf_double+i)
                     *(p_buf_double + i) = nullptr;
                 }
                 delete[] p_buf_double;
                 p_buf_double = nullptr;
+                break;
             }
         }
 
         file.clear();
-        FReadMatr(file, p_buf_double, dsize_s, dsize_c);
-       /* file.seekg(0, ios::beg);
+        FReadMatr(file, p_buf_double, dsize_s, dsize_c); // 179 180 181 182 но в функции
+        /*file.seekg(0, ios::beg);
         for(int i=0; i<dsize_s; i++)
             for (int j = 0; j < dsize_c; j++)
                 file >> *(*(p_buf_double + i) + j);*/
@@ -205,6 +198,7 @@ int main()
                             //*(*(p_buf_double + i) + l) += *(*(p_buf_double + l) + k);
                             //*(*(p_buf_double + l) + k) = *(*(p_buf_double + i) + l) - *(*(p_buf_double + l) + k);
                             //*(*(p_buf_double + i) + l) -= *(*(p_buf_double + l) + k);
+                            //не совсем правильно будет работать с типом double если будет большая разница значений мантисс
                             dtemp = *(*(p_buf_double + i) + l);
                             *(*(p_buf_double + i) + l) = *(*(p_buf_double + l) + k);
                             *(*(p_buf_double + l) + k) = dtemp;
@@ -215,11 +209,14 @@ int main()
                     {
                         cout << "\nНеудалось найти замену для " << (i+1) << " строки\n";
                     }
-
                 }
                
             }
         MatrCout(p_buf_double, dsize_s, dsize_c);
+        for(int i=0; i<dsize_s; i++)
+            delete[] *(p_buf_double+i);
+        delete[] p_buf_double;
+        p_buf_double=nullptr;
     }
     return 0;
 }

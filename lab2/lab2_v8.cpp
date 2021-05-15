@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 #include <cerrno>
+#include <filesystem>
 
 #ifdef LINUX
 #include <stdlib.h>
@@ -109,7 +110,7 @@ char hotkey_to_char(int echo)
     return ch;
 }
 
-void term_clear_screen() 
+void term_clear_screen()
 {
 #ifdef LINUX
     system("clear");
@@ -128,8 +129,8 @@ int main()
     setlocale(LC_ALL, "ru");
     while (power)
     {
-        
-        if(tempstr=="*" || FileAdress =="*")
+
+        if (tempstr == "*" || FileAdress == "*")
         {
             tempstr.clear();
             FileAdress.clear();
@@ -139,7 +140,7 @@ int main()
             mode = '3';
         else
         {
-            cout<< "1) Создать исходные данные\n"
+            cout << "1) Создать исходные данные\n"
                 << "2) Считать данные\n"
                 << "3) Вывести исходные данные на экран\n"
                 << "4) Обработать данные по алгоритму функции\n"
@@ -161,15 +162,15 @@ int main()
                 cout << "Введите количество элементнов, которое вы хотите добавить(чтобы вернуться в главное меню *): ";
                 if (!(cin >> dsize) || (cin.peek() != '\n') || (dsize <= 0))
                 {
+                    bool fbit = false;
+                    if (cin.fail())
+                        fbit = true;
                     cin.clear();
                     getline(cin, tempstr);
-                    if (!dsize && tempstr == "*")
+                    if (fbit && tempstr == "*")
                         break;
-                    else
-                    {
-                        cout << "Ошибка, введено недопустимое значение\n";
-                        continue;
-                    }
+                    cout << "Ошибка, введено недопустимое значение\n";
+                    continue;
                 }
                 if (buf_double)
                 {
@@ -191,19 +192,21 @@ int main()
                     cout << "\tЭлемент " << (i + 1) << " = ";
                     if (!(cin >> buf_double[i]) || (cin.peek() != '\n'))
                     {
+                        bool fbit = false;
+                        if (cin.fail())
+                            fbit = true;
                         cin.clear();
                         getline(cin, tempstr);
-                        if (!*(buf_double+i) && tempstr == "*")
-                        {
+                        if (fbit && tempstr == "*")
                             break;
-                        }
-                        cout << "\tВведено недопустимое значение!\n";
+                        cout << "Ошибка, введено недопустимое значение\n";
                         continue;
                     }
                     i++;
                 }
                 if (tempstr == "*")
                 {
+                    cout << "Очистка данных в оперативной памяти в связи с выходом";
                     delete[] buf_double;
                     buf_double = nullptr;
                     break;
@@ -216,7 +219,6 @@ int main()
                     getline(cin, FileAdress);
                     if (FileAdress == "*")
                         break;
-
                     file.open(FileAdress, ios_base::in);
                     if (file.is_open())
                     {
@@ -224,7 +226,7 @@ int main()
                         char choice;
                         while (true)
                         {
-                            cout << "\nФайл с именем "<<FileAdress<<" уже существует, вы хотите:\n"
+                            cout << "\nФайл с именем " << FileAdress << " уже существует, вы хотите:\n"
                                 << "1)Перезаписать файл\n"
                                 << "2)Указать новое имя файла\n"
                                 << "3)Не сохранять" << endl;
@@ -240,11 +242,11 @@ int main()
                     }
 
                     file.open(FileAdress, ios_base::out | ios_base::binary);
-                    if(!file.is_open())
+                    if (!file.is_open())
                     {
-                        cout<<"\nНе удалось открыть"<<FileAdress<<"для записи\n";
+                        cout << "\nНе удалось открыть" << FileAdress << "для записи\n";
                     }
-                    file.write((char*) buf_double, sizeof(d_arr)*dsize);        //for (int i = 0; i < dsize; i++)
+                    file.write((char*)buf_double, sizeof(d_arr) * dsize);       //for (int i = 0; i < dsize; i++)
                     file.close();                                               //file.write((char*)(buf_double + i), sizeof(d_arr));
                     break;
                 }
@@ -258,6 +260,14 @@ int main()
                 getline(cin, FileAdress);
                 if (FileAdress == "*")
                     break;
+
+                if (buf_double)
+                {
+                    cout << "\nОчистка данных в оперативной памяти\n";
+                    delete[] buf_double;
+                    buf_double = nullptr;
+                }
+
                 file.open(FileAdress, ios_base::in | ios_base::binary);
                 if (!(file.is_open()))
                 {
@@ -289,8 +299,8 @@ int main()
                     cout << "\nОшибка выделения оперативной памяти\n";
                     continue;
                 }
-                file.seekg(0);
-                file.read((char*) buf_double, sizeof(d_arr)*dsize);             //for (int i = 0; i < dsize; i++)
+                file.seekg(0);                                                  //file.clear();
+                file.read((char*)buf_double, sizeof(d_arr) * dsize);            //for (int i = 0; i < dsize; i++)
                 file.close();                                                   //file.read((char*)(buf_double + i), sizeof(d_arr));
                 break;
             }
