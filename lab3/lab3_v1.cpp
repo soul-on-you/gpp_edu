@@ -1,5 +1,6 @@
 #define LINUX
 #define v1
+//#define Stream
 
 #include <iostream>
 #include <stdio.h>
@@ -28,6 +29,7 @@ size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
     return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
+
 void MatrCout(d_arr** buf_d_arr, const int &bufstr, const int &bufcolomn)
 {
     ostringstream numberstr("|   |", ostringstream::ate);
@@ -51,6 +53,7 @@ void MatrCout(d_arr** buf_d_arr, const int &bufstr, const int &bufcolomn)
 void FReadMatr(ifstream &file, d_arr** buf_a_arr ,const int& bufstr, const int& bufcolomn)
 {
     int pos = file.tellg();
+    file.clear();
     file.seekg(0, ios::beg);
     for (int i = 0; i < bufstr; i++)
         for (int j = 0; j < bufcolomn; j++)
@@ -67,6 +70,9 @@ int main()
     {
         ifstream file;
         string FileAdress, tempstr;
+#ifdef Stream
+        istringstream istr;
+#endif
         cout << "\nВведите имя файла(чтобы выйти *): ";
         getline(cin, FileAdress);
         if (FileAdress == "*")
@@ -81,10 +87,29 @@ int main()
         cout << '\n';
         int pos = 0, dsize_s = 0, dsize_all_sim = 0, dsize_c = 0;
         d_arr dtemp = 0;
-        bool power = true;
-
+       
         while (!(file >> ws).eof() && !err)
         {
+#ifdef Stream
+            dsize_c = 0;
+            getline(file, tempstr);
+            istr.str(tempstr);
+            istr.clear();
+            while(!(istr>>ws).eof())
+            {
+                if(!(istr >> dtemp) || (istr.peek() != ' ' && istr.peek() != '\n'
+                    && istr.peek() != '\t' && istr.peek() != EOF))
+                {
+                    err = 'f';
+                    break;
+                }
+                dsize_c++;
+            }
+            dsize_all_sim += dsize_c;
+            if (dsize_all_sim % dsize_c)
+                err = 'c';
+            dsize_s++;
+#else
             char tmp(0);
             pos = file.tellg();
             if (!(file >> dtemp) || (file.peek() != ' ' && file.peek() != '\n'
@@ -100,9 +125,9 @@ int main()
                 tmp = file.get();
                 switch (tmp)
                 {
-                case'\t':case' ':
+                case '\t':case ' ':
                     break;
-                case EOF:case'\n':
+                case EOF: case '\n':
                     if (dsize_c)
                     {
                         dsize_s++;
@@ -118,14 +143,16 @@ int main()
                     tmp = EOF;
                 }
             }
+#endif
         }
+
         if (err == 'f')
         {
             file.clear();
             file.seekg(pos);
             file >> tempstr;
             file.close();
-            cout << "Найдена ошибка в элементе номер " << (dsize_c + 1) << " на строке " << (dsize_s + 1)
+            cout << "\nНайдена ошибка в элементе номер " << (dsize_c + 1) << " на строке " << (dsize_s + 1)
                 << "\nАбсолютная позиция в файле " << pos
                 << "\nНеверное значение: \"" << tempstr << '\"' << '\n';
             cout << "\nФайл содержит некорректные значения\n";
@@ -166,7 +193,7 @@ int main()
                 cout << "\nОшибка выделения оперативной памяти\n";
                 for (i--; 0 <= i; i--)
                 {
-                    delete[] p_buf_double[i]; // или *(p_buf_double+i)
+                    delete[] p_buf_double[i];
                     *(p_buf_double + i) = nullptr;
                 }
                 delete[] p_buf_double;
@@ -174,13 +201,7 @@ int main()
                 break;
             }
         }
-
-        file.clear();
-        FReadMatr(file, p_buf_double, dsize_s, dsize_c); // 179 180 181 182 но в функции
-        /*file.seekg(0, ios::beg);
-        for(int i=0; i<dsize_s; i++)
-            for (int j = 0; j < dsize_c; j++)
-                file >> *(*(p_buf_double + i) + j);*/
+        FReadMatr(file, p_buf_double, dsize_s, dsize_c);
         MatrCout(p_buf_double, dsize_s, dsize_c);
 
         for (int i = 0, j = 0; i < dsize_s; i++, j++)
@@ -195,14 +216,10 @@ int main()
                         cout << "\nЗамена столбца " << (i + 1) << " на строку " << (k+1) << '\n';
                         for (int l = 0; l < dsize_c; l++) //не квадратная тогда l<min(dsize_s, dsize_c)
                         {
-                            //*(*(p_buf_double + i) + l) += *(*(p_buf_double + l) + k);
-                            //*(*(p_buf_double + l) + k) = *(*(p_buf_double + i) + l) - *(*(p_buf_double + l) + k);
-                            //*(*(p_buf_double + i) + l) -= *(*(p_buf_double + l) + k);
-                            //не совсем правильно будет работать с типом double если будет большая разница значений мантисс
-                            dtemp = *(*(p_buf_double + i) + l);
-                            *(*(p_buf_double + i) + l) = *(*(p_buf_double + l) + k);
-                            *(*(p_buf_double + l) + k) = dtemp;
-                        }
+                            dtemp = *(*(p_buf_double + i) + l);                         //*(*(p_buf_double + i) + l) += *(*(p_buf_double + l) + k);
+                            *(*(p_buf_double + i) + l) = *(*(p_buf_double + l) + k);    //*(*(p_buf_double + l) + k) = *(*(p_buf_double + i) + l) - *(*(p_buf_double + l) + k);
+                            *(*(p_buf_double + l) + k) = dtemp;                         //*(*(p_buf_double + i) + l) -= *(*(p_buf_double + l) + k);
+                        }                                                               //не совсем правильно будет работать с типом double если будет большая разница значений мантисс
                         break;
                     }
                     if (dsize_c - 1 == k)

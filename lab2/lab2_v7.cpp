@@ -161,9 +161,12 @@ int main()
                 cout << "Введите количество элементнов, которое вы хотите добавить(чтобы вернуться в главное меню *): ";
                 if (!(cin >> dsize) || (cin.peek() != '\n') || (dsize <= 0))
                 {
+                    bool fbit=false;
+                    if(cin.fail())
+                        fbit=true;
                     cin.clear();
                     getline(cin, tempstr);
-                    if (!dsize && tempstr == "*")
+                    if (fbit && tempstr == "*")
                         break;
                     else
                     {
@@ -191,9 +194,12 @@ int main()
                     cout << "\tЭлемент " << (i + 1) << " = ";
                     if (!(cin >> buf_double[i]) || (cin.peek() != '\n'))
                     {
+                        bool fbit=false;
+                        if(cin.fail())
+                            fbit=true;
                         cin.clear();
                         getline(cin, tempstr);
-                        if (!*(buf_double+i) && tempstr == "*")
+                        if (fbit && tempstr == "*")
                         {
                             break;
                         }

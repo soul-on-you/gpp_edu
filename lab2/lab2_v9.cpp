@@ -1,7 +1,7 @@
 #define LINUX
-//#define filesize_v2
+#define filesize_v2
 //#define filesize_v1
-//#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 
 #include <iostream>
 #include <stdio.h>
@@ -183,7 +183,6 @@ int main()
                 }
                 if (buf_double)
                 {
-                    cout << "\nОчистка данных в оперативной памяти\n";
                     delete[] buf_double;
                     buf_double = nullptr;
                 }
@@ -260,6 +259,7 @@ int main()
                     if (!file.is_open())
                     {
                         perror(("\nОшибка открытия файла с именем \"" + FileAdress + "\"").c_str());
+                        continue;
                     }
                     file.write((char*)buf_double, sizeof(d_arr) * dsize);       //for (int i = 0; i < dsize; i++)
                     file.close();                                               //file.write((char*)(buf_double + i), sizeof(d_arr));
@@ -301,12 +301,10 @@ int main()
 #else
                 file.seekg(0);
                 file.ignore(INT32_MAX, EOF);
-                dsize=file.gcount()
+                dsize=file.gcount();
 #endif
 #else           
-                file.ignore()
                 dsize=experimental::filesystem::file_size(FileAdress);
-                cout << '\n' << dsize << '\n';
 #endif
                 if (dsize % sizeof(d_arr))
                 {
