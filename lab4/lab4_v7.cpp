@@ -4,7 +4,6 @@
 #include <string>
 #include <iomanip>
 #include <cmath>
-#include <limits>
 #include <cerrno>
 #include <functional>
 #include <sstream>
@@ -23,10 +22,10 @@ union ErrInfo
         int dsize_s;
         int dsize_c;
         streamoff pos;
-    }fbit;
+    } fbit;
 };
 
-bool GetFileName(string& tmp, const string& str)
+bool GetFileName(string &tmp, const string &str)
 {
     std::cin.sync_with_stdio(false);
     cout << str << "\nВведите имя файла (чтобы завершить работу программы, введите *): ";
@@ -37,12 +36,11 @@ bool GetFileName(string& tmp, const string& str)
     return true;
 }
 
-bool IstreamElementCorCheck(istream& istr, ErrInfo* err = nullptr)
+bool IstreamElementCorCheck(istream &istr, ErrInfo *err = nullptr)
 {
     Xtype Xtemp;
     streamoff pos = istr.tellg();
-    if (!(istr >> Xtemp) || (istr.peek() != ' ' && istr.peek() != '\n'
-        && istr.peek() != '\t' && istr.peek() != EOF))
+    if (!(istr >> Xtemp) || (istr.peek() != ' ' && istr.peek() != '\n' && istr.peek() != '\t' && istr.peek() != EOF))
     {
         if (err)
             err->fbit.pos = pos;
@@ -51,7 +49,7 @@ bool IstreamElementCorCheck(istream& istr, ErrInfo* err = nullptr)
     return true;
 }
 
-char CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, ErrInfo* err = nullptr)
+char CheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
     int dsize_all = 0;
     while (!(file >> ws).eof())
@@ -72,9 +70,11 @@ char CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, ErrInfo* err = nullpt
             tmp = file.get();
             switch (tmp)
             {
-            case '\t': case ' ':
+            case '\t':
+            case ' ':
                 break;
-            case EOF: case '\n':
+            case EOF:
+            case '\n':
                 if (dsize_c)
                 {
                     dsize_s++;
@@ -111,7 +111,7 @@ char CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, ErrInfo* err = nullpt
     return 0;
 }
 
-char SSCheckMatr(ifstream& file, int& dsize_s, int& dsize_c, ErrInfo* err = nullptr)
+char SSCheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
     int dsize_all = 0, pos_s = 0;
     while (!(file >> ws).eof())
@@ -156,7 +156,7 @@ char SSCheckMatr(ifstream& file, int& dsize_s, int& dsize_c, ErrInfo* err = null
     return 0;
 }
 
-void FReadMatr(ifstream& file, Xtype** matr, const int& dsize_s, const int& dsize_c)
+void FReadMatr(ifstream &file, Xtype **matr, const int &dsize_s, const int &dsize_c)
 {
     streamoff pos = file.tellg(); ///для чтения из случайного места: 1) сохраняем позицию
     file.clear();
@@ -168,16 +168,16 @@ void FReadMatr(ifstream& file, Xtype** matr, const int& dsize_s, const int& dsiz
     file.seekg(pos); ///для чтения из случайного места: 2) возвращаем позицию
 }
 
-void DeleteMatr(Xtype**& matr, const int& dsize_s)
+void DeleteMatr(Xtype **&matr, const int &dsize_s)
 {
     for (int i = 0; i < dsize_s; i++)
         delete[] * (matr + i);
     delete[] matr;
     matr = nullptr;
 }
-char CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, ErrInfo* err = nullptr)
+char CreateMatr(Xtype **&matr, const int &dsize_s, const int &dsize_c, ErrInfo *err = nullptr)
 {
-    matr = new(nothrow) Xtype * [dsize_s];
+    matr = new (nothrow) Xtype *[dsize_s];
     if (matr == nullptr)
     {
         if (err)
@@ -186,7 +186,7 @@ char CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, ErrInfo* 
     }
     for (int i = 0; i < dsize_s; i++)
     {
-        *(matr + i) = new(nothrow) Xtype[dsize_c];
+        *(matr + i) = new (nothrow) Xtype[dsize_c];
         if (*(matr + i) == nullptr)
         {
             DeleteMatr(matr, i);
@@ -198,8 +198,7 @@ char CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, ErrInfo* 
     return 0;
 }
 
-
-char LoadMatr(function <bool(string&, const string&)> f_get_adress, Xtype**& matr, string& FileAdress, int& dsize_s, int& dsize_c, ErrInfo* err = nullptr)
+char LoadMatr(function<bool(string &, const string &)> f_get_adress, Xtype **&matr, string &FileAdress, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
     dsize_s = 0, dsize_c = 0;
     if (!f_get_adress(FileAdress, "\nСчитывание из файла:"))
@@ -230,25 +229,25 @@ char LoadMatr(function <bool(string&, const string&)> f_get_adress, Xtype**& mat
 
 /*при вызове функции нельзя передавать аргументом параметр err, если до этого он не определялся, в другой функции,
  которую мы хотим проверить на наличие ошибок, иначе мы не получим корректную обработку*/
-void ErrCheck(const string& FileAdress, char& status_code, ErrInfo* err = nullptr)
+void ErrCheck(const string &FileAdress, char &status_code, ErrInfo *err = nullptr)
 {
     if (err)
     {
         switch (status_code)
         {
         case 'f':
-            {
-                string tmp;
-                ifstream file(FileAdress);
-                file.seekg(err->fbit.pos);
-                file >> tmp;
-                file.close();
-                cout << "Найдена ошибка в элементе номер " << (err->fbit.dsize_c + 1) << " на строке " << (err->fbit.dsize_s + 1)
-                    << "\nАбсолютная позиция в файле " << err->fbit.pos
-                    << "\nНеверное значение: \"" << tmp << '\"' << '\n'
-                    << "\nФайл содержит некорректные значения\n";
-            }
-            break;
+        {
+            string tmp;
+            ifstream file(FileAdress);
+            file.seekg(err->fbit.pos);
+            file >> tmp;
+            file.close();
+            cout << "Найдена ошибка в элементе номер " << (err->fbit.dsize_c + 1) << " на строке " << (err->fbit.dsize_s + 1)
+                 << "\nАбсолютная позиция в файле " << err->fbit.pos
+                 << "\nНеверное значение: \"" << tmp << '\"' << '\n'
+                 << "\nФайл содержит некорректные значения\n";
+        }
+        break;
         case 'e':
             cout << "\nВ файле не оказалось значений, которые можно считать\n";
             break;
@@ -274,9 +273,9 @@ void ErrCheck(const string& FileAdress, char& status_code, ErrInfo* err = nullpt
     status_code = 0;
 }
 
-Xtype** CopyMatr(Xtype const* const* matr1, const int& dsize_s, const int& dsize_c, char& status_code, ErrInfo* err = nullptr)
+Xtype **CopyMatr(Xtype const *const *matr1, const int &dsize_s, const int &dsize_c, char &status_code, ErrInfo *err = nullptr)
 {
-    Xtype** matr2;
+    Xtype **matr2;
     if (!(status_code = CreateMatr(matr2, dsize_s, dsize_c, err)))
         for (int i = 0; i < dsize_s; i++)
             for (int j = 0; j < dsize_c; j++)
@@ -284,7 +283,7 @@ Xtype** CopyMatr(Xtype const* const* matr1, const int& dsize_s, const int& dsize
     return matr2;
 }
 
-char WriteMatr(function <bool(string&, const string&)> f_get_name, Xtype const* const* matr, string& FileAdress, const int& dsize_s, const int& dsize_c, ErrInfo* err = nullptr)
+char WriteMatr(function<bool(string &, const string &)> f_get_name, Xtype const *const *matr, string &FileAdress, const int &dsize_s, const int &dsize_c, ErrInfo *err = nullptr)
 {
     if (f_get_name(FileAdress, "\nЗапись в файл:"))
     {
@@ -307,13 +306,12 @@ char WriteMatr(function <bool(string&, const string&)> f_get_name, Xtype const* 
     return -1;
 }
 
-
 template <typename N>
 size_t TextVievSize(N a, ios::fmtflags f = ios_base::dec | ios_base::fixed, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
-void CoutMatr(Xtype const* const* matr, const int& dsize_s, const int& dsize_c)
+void CoutMatr(Xtype const *const *matr, const int &dsize_s, const int &dsize_c)
 {
     ostringstream numberstr("|   |", ostringstream::ate);
     ostringstream skipstr("+---+", ostringstream::ate);
@@ -322,7 +320,10 @@ void CoutMatr(Xtype const* const* matr, const int& dsize_s, const int& dsize_c)
         skipstr << setw(12) << setfill('-') << '+';
         numberstr << setw(6 - TextVievSize(j) / 2 - TextVievSize(j) % 2) << "" << (j + 1) << setw(6 - TextVievSize(j) / 2) << '|';
     }
-    cout << '\n' << skipstr.str() << '\n' << numberstr.str() << '\n' << skipstr.str() << '\n';
+    cout << '\n'
+         << skipstr.str() << '\n'
+         << numberstr.str() << '\n'
+         << skipstr.str() << '\n';
     for (int i = 0; i < dsize_s; i++)
     {
         cout << "| " << (i + 1) << " |";
@@ -330,11 +331,12 @@ void CoutMatr(Xtype const* const* matr, const int& dsize_s, const int& dsize_c)
         {
             cout << setw(10) << right << scientific << setprecision(2) << *(*(matr + i) + j) << " |";
         }
-        cout << endl << skipstr.str() << '\n';
+        cout << endl
+             << skipstr.str() << '\n';
     }
 }
 
-void ResultFunc(Xtype** matr, const int& dsize_s, const int& dsize_c)
+void ResultFunc(Xtype **matr, const int &dsize_s, const int &dsize_c)
 {
     for (int i = 0, j = 0; i < dsize_s; i++, j++)
         if (*(*(matr + i) + j) < 0)
@@ -365,7 +367,7 @@ void ResultFunc(Xtype** matr, const int& dsize_s, const int& dsize_c)
 
 int main()
 {
-    Xtype** matr = nullptr;
+    Xtype **matr = nullptr;
     ErrInfo err;
     int dsize_c = 0, dsize_s = 0;
     char status_code;
@@ -373,7 +375,7 @@ int main()
     while (true)
     {
         string FileAdress;
-        status_code = LoadMatr(GetFileName, matr, FileAdress, dsize_s, dsize_c, &err);    //функция загрузки матрицы
+        status_code = LoadMatr(GetFileName, matr, FileAdress, dsize_s, dsize_c, &err); //функция загрузки матрицы
         if (status_code > 0)
         {
             ErrCheck(FileAdress, status_code, &err);
@@ -381,19 +383,19 @@ int main()
         }
         else if (!status_code)
         {
-            CoutMatr(matr, dsize_s, dsize_c);   //фунция форматированного вывода в консоль
-            Xtype** copymatr = CopyMatr(matr, dsize_s, dsize_c, status_code, &err);     //создание копии матрицы
-            if (copymatr == nullptr)   /////или if(status_code)
+            CoutMatr(matr, dsize_s, dsize_c);                                       //фунция форматированного вывода в консоль
+            Xtype **copymatr = CopyMatr(matr, dsize_s, dsize_c, status_code, &err); //создание копии матрицы
+            if (copymatr == nullptr)                                                /////или if(status_code)
             {
-                ErrCheck(FileAdress, status_code, &err);    //функция обработки ошибок
+                ErrCheck(FileAdress, status_code, &err); //функция обработки ошибок
             }
-            ResultFunc(copymatr, dsize_s, dsize_c);    //функция по заданию
-            CoutMatr(matr, dsize_s, dsize_c);   // вывод начальной матрицы
-            CoutMatr(copymatr, dsize_s, dsize_c);   //вывод копии матрицы, после обработки функцией
-            if ((status_code = WriteMatr(GetFileName, copymatr, FileAdress, dsize_s, dsize_c, &err)) > 0)   //функция вывода в файл
-                ErrCheck(FileAdress, status_code, &err);    //функция обработки ошибок
-            DeleteMatr(matr, dsize_s);      //функция удаления матрицы
-            DeleteMatr(copymatr, dsize_s);      //функция удаления копии матрицы
+            ResultFunc(copymatr, dsize_s, dsize_c);                                                       //функция по заданию
+            CoutMatr(matr, dsize_s, dsize_c);                                                             // вывод начальной матрицы
+            CoutMatr(copymatr, dsize_s, dsize_c);                                                         //вывод копии матрицы, после обработки функцией
+            if ((status_code = WriteMatr(GetFileName, copymatr, FileAdress, dsize_s, dsize_c, &err)) > 0) //функция вывода в файл
+                ErrCheck(FileAdress, status_code, &err);                                                  //функция обработки ошибок
+            DeleteMatr(matr, dsize_s);                                                                    //функция удаления матрицы
+            DeleteMatr(copymatr, dsize_s);                                                                //функция удаления копии матрицы
             if (!status_code)
                 continue;
         }

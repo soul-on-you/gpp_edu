@@ -148,7 +148,6 @@ int main()
     setlocale(LC_ALL, "ru");
     while (power)
     {
-
         if (clearterm)
         {
             clearterm = false;
@@ -165,6 +164,7 @@ int main()
                  << "3) Вывести исходные данные на экран\n"
                  << "4) Обработать данные по алгоритму функции\n"
                  << "5) Завершиен работы\n"
+                 << "6) Очистить экран\n"
                  << "Выберите режим работы: " << endl;
             mode = hotkey_to_char(false);
         }
@@ -282,8 +282,20 @@ int main()
                 }
                 crchash = HashCheck(buf_double, sizeof(d_arr) * dsize);
                 file.write((char *)&crchash, sizeof(crchash));
-                file.write((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
-                file.close();                                          //file.write((char*)(buf_double + i), sizeof(d_arr));
+                if (file.fail())
+                {
+                    cout << "\nОшибка,неудалось записать хэш и данные в файл";
+                    remove(FileAdress.c_str());
+                    continue;
+                }
+                file.write((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)     //file.write((char*)(buf_double + i), sizeof(d_arr));
+                if (file.fail())
+                {
+                    cout << "\nОшибка, неудалось записать данные в файл";
+                    remove(FileAdress.c_str());
+                    continue;
+                }
+                file.close();
                 break;
             }
             break;
@@ -335,14 +347,13 @@ int main()
                     continue;
                 }
 
-                if ((file_size - sizeof(crchash)) % sizeof(d_arr) || file_size < 1 + sizeof(crchash))
+                if (file_size <= sizeof(crchash) || (file_size - sizeof(crchash)) % sizeof(d_arr))
                 {
                     file.close();
                     cout << "\nОшибка считывания, нарушена целостность данных\n";
                     continue;
                 }
-                dsize = file_size - sizeof(crchash);
-                dsize /= sizeof(d_arr);
+                dsize = (file_size - sizeof(crchash)) / sizeof(d_arr);
                 // этот вариант подходит, если пользователь думал, что в файле есть данные
                 if (buf_double)          // и хорошо бы их получить, но раз файл пустой или нарушена целостность,
                 {                        // можно оставить массив в памяти, например, в нем хранились бы номера файлов
@@ -369,6 +380,10 @@ int main()
                 break;
             }
             break;
+        case '6':
+            term_clear_screen();
+            if (!buf_double)
+                break;
         case '3':
             if (!buf_double)
             {
