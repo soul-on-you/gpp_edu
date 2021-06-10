@@ -32,9 +32,9 @@ typedef double d_arr;
 using namespace std;
 
 template <typename Xtype>
-size_t TextVievSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
+size_t TextVievSize(Xtype a, ios::fmtflags f = ios_base::dec | ios_base::fixed, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 
 void space(int needed, ostringstream& ostr)
@@ -175,7 +175,7 @@ bool ReWriteHash(const char *hash)
     return false;
 }
 #else
-bool ReWriteHash(fstream & CRCHashFile, const d_arr * buf_double, const string& FileAdress, const int& dsize, char& mode, const char* hash, const int& HASH_SIZE, ostringstream & numberstr, ostringstream & elementstr)
+bool ReWriteHash(fstream& CRCHashFile, const d_arr* buf_double, const string& FileAdress, const int& dsize, char& mode, const char* hash, const int& HASH_SIZE, ostringstream & numberstr, ostringstream & elementstr)
 {
     cout << "\nВнимание, могли произойти ошибки при считывании\n\n";
     for (int i = 0; i < dsize; i++)

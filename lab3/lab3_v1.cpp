@@ -1,6 +1,6 @@
 #define LINUX
 #define v1
-//#define Stream
+#define Stream
 
 #include <iostream>
 #include <stdio.h>
@@ -92,14 +92,18 @@ int main()
         {
 #ifdef Stream
             dsize_c = 0;
+            pos=file.tellg();
+            int pos1=0;
             getline(file, tempstr);
             istr.str(tempstr);
             istr.clear();
             while(!(istr>>ws).eof())
             {
+                pos1=istr.tellg();
                 if(!(istr >> dtemp) || (istr.peek() != ' ' && istr.peek() != '\n'
                     && istr.peek() != '\t' && istr.peek() != EOF))
-                {
+                {   
+                    pos+=pos1;
                     err = 'f';
                     break;
                 }

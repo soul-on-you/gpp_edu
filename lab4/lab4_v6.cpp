@@ -44,7 +44,7 @@ bool GetFileName(string& tmp)
     getline(cin, tmp);
     return true;
 }
-bool FileElementCorCheck(ifstream& file, Err& err) ////ErrInfo* err
+bool FileElementCorCheck(ifstream& file, Err* err=nullptr) ////ErrInfo* err
 {
     char tmp(0);
     Xtype Xtemp;
@@ -54,23 +54,23 @@ bool FileElementCorCheck(ifstream& file, Err& err) ////ErrInfo* err
     {
         //m_data.err.errinfo.fbit.pos = pos;
         //m_data.err.errtype = 'f';
-        err.errtype = 'f';
-        err.errinfo.fbit.pos = pos;
+        err->errtype = 'f';
+        err->errinfo.fbit.pos = pos;
         //m_data.err.errinfo.fbit.dsize_s = m_data.dsize_s;  ///////// В ОШИБКАХ МОЖНО ИСПОЛЬЗОВАТЬ САМ МАТР
         //m_data.err.errinfo.fbit.dsize_c = m_data.dsize_c;  ///////// m_data.dsize_s и m_data.dsize_c
         return false;
     }
     return true;
 }
-bool CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, Err& err)        ////int &dsize_s, int &dsize_c,  ErrInfo* err=nullptr
+bool CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, Err* err=nullptr)        ////int &dsize_s, int &dsize_c,  ErrInfo* err=nullptr
 {
     int dsize_all = 0;
     while (!(file >> ws).eof())   //////&& !err
     {
         if (!FileElementCorCheck(file, err))          //m_data.err.fbit.dsize_c=dsize_c; //m_data.err.fbit.dsize_s=dsize_s;
         {
-            err.errinfo.fbit.dsize_s = dsize_s;
-            err.errinfo.fbit.dsize_c = dsize_c;
+            err->errinfo.fbit.dsize_s = dsize_s;
+            err->errinfo.fbit.dsize_c = dsize_c;
             return false;
         }
         dsize_c++;
@@ -88,14 +88,14 @@ bool CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, Err& err)        ////
                     dsize_s++;
                     if (dsize_s > dsize_c)
                     {
-                        err.errtype = 'q';
+                        err->errtype = 'q';
                         return false;
                     }
                     dsize_all += dsize_c;
                     if (dsize_all % dsize_c)
                     {
-                        err.errinfo.dsize_s = dsize_s;
-                        err.errtype = 's';
+                        err->errinfo.dsize_s = dsize_s;
+                        err->errtype = 's';
                         return false;
                     }
                     if (tmp != EOF)
@@ -110,13 +110,13 @@ bool CheckMatr(ifstream& file, int& dsize_s, int& dsize_c, Err& err)        ////
     }
     if (!dsize_s)
     {
-        err.errtype = 'e';
+        err->errtype = 'e';
         return false;
     }
     dsize_c = dsize_all / dsize_s;
     if (dsize_s != dsize_c)
     {
-        err.errtype = 'q';
+        err->errtype = 'q';
         return false;
     }
     return true;
@@ -141,13 +141,13 @@ void DeleteMatr(Xtype**& matr, const int& dsize_s) ////Xtype** (&matr), const in
     delete[] matr;
     matr = nullptr;
 }
-bool CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, Err& err)    //////Xtype** matr, const int &str_in_matr, const int &column_in_matr, ErrInfo &err
+bool CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, Err* err=nullptr)    //////Xtype** matr, const int &str_in_matr, const int &column_in_matr, ErrInfo &err
 {
     matr = new(nothrow) Xtype * [dsize_s];
     if (matr == nullptr)
     {
-        err.errtype = 'a';
-        err.errinfo.dyn_elem = 0; /////под указатели но протестить закоментив
+        err->errtype = 'a';
+        err->errinfo.dyn_elem = 0; /////под указатели но протестить закоментив
         return false;
     }
     for (int i = 0; i < dsize_s; i++)
@@ -156,8 +156,8 @@ bool CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, Err& err)
         if (*(matr + i) == nullptr)
         {
             DeleteMatr(matr, i - 1);
-            err.errtype = 'a';
-            err.errinfo.dsize_s = (i + 1);
+            err->errtype = 'a';
+            err->errinfo.dsize_s = (i + 1);
             return false;
         }
     }
@@ -166,7 +166,7 @@ bool CreateMatr(Xtype**& matr, const int& dsize_s, const int& dsize_c, Err& err)
 
 
 //template <typename StreamType>
-bool LoadMatr(function <bool(string&)> f_get_adress, Xtype**& matr, string& FileAdress, int& dsize_s, int& dsize_c, Err& err)  ///function <void(StreamType&, Xtype**, const int&, const int&)>f_read
+bool LoadMatr(function <bool(string&)> f_get_adress, Xtype**& matr, string& FileAdress, int& dsize_s, int& dsize_c, Err* err=nullptr)  ///function <void(StreamType&, Xtype**, const int&, const int&)>f_read
 {                                             ///function <string()> f_get_adress, Xtype** matr, ifstream &file, ErrInfo* &err
     //string FileAdress;                      ///function <bool(string&)> f_get_adress, MatrInfo& m_data , string &FileAdress
     cout << "\nСчитывание из файла:";
@@ -191,23 +191,23 @@ bool LoadMatr(function <bool(string&)> f_get_adress, Xtype**& matr, string& File
     else
     {
         //m_data.err.errinfo.filename = &FileAdress;
-        err.errtype = 'o'; ///////// m_data.err.errtype = 'o';
+        err->errtype = 'o'; ///////// m_data.err.errtype = 'o';
     }
     return false;
 }
-bool ErrCheck(const string& FileAdress, const int& dsize_s, const int& dsize_c, Err& err) ///////const MatrInfo& m_data   string& FileAdress
+bool ErrCheck(const string& FileAdress, const int& dsize_s, const int& dsize_c, Err* err=nullptr) ///////const MatrInfo& m_data   string& FileAdress
 {
-    switch (err.errtype)
+    switch (err->errtype)
     {
     case 'f':
     {
         string tmp;
         ifstream file(FileAdress);
-        file.seekg(err.errinfo.fbit.pos);
+        file.seekg(err->errinfo.fbit.pos);
         file >> tmp;
         file.close();
-        cout << "Найдена ошибка в элементе номер " << (err.errinfo.fbit.dsize_c + 1) << " на строке " << (err.errinfo.fbit.dsize_s + 1)
-            << "\nАбсолютная позиция в файле " << err.errinfo.fbit.pos
+        cout << "Найдена ошибка в элементе номер " << (err->errinfo.fbit.dsize_c + 1) << " на строке " << (err->errinfo.fbit.dsize_s + 1)
+            << "\nАбсолютная позиция в файле " << err->errinfo.fbit.pos
             << "\nНеверное значение: \"" << tmp << '\"' << '\n'
             << "\nФайл содержит некорректные значения\n";
     }
@@ -216,7 +216,7 @@ bool ErrCheck(const string& FileAdress, const int& dsize_s, const int& dsize_c, 
         cout << "\nВ файле не оказалось значений, которые можно считать\n";
         break;
     case 's':
-        cout << "\nНе правильный формат, количество элементов строки " << err.errinfo.dsize_s << " не совпадает со стокой " << (err.errinfo.dsize_s - 1) << '\n';
+        cout << "\nНе правильный формат, количество элементов строки " << err->errinfo.dsize_s << " не совпадает со стокой " << (err->errinfo.dsize_s - 1) << '\n';
         break;
     case 'q':
         cout << "\nНе правильный формат, матрица не кваратная\n";
@@ -225,19 +225,19 @@ bool ErrCheck(const string& FileAdress, const int& dsize_s, const int& dsize_c, 
         perror(("\nОшибка открытия файла с именем \"" + FileAdress + "\"").c_str());
         break;
     case 'a':
-        if (!err.errinfo.dsize_s)
+        if (!err->errinfo.dsize_s)
             cout << "\nОшибка, не удалось выделить память под массив указателей\n";
         else
-            cout << "\nОшибка, не удалось выделить память под " << err.errinfo.dsize_s << " строку\n";
+            cout << "\nОшибка, не удалось выделить память под " << err->errinfo.dsize_s << " строку\n";
         break;
     default:
         return false;
     }
-    err.errtype = 0;
+    err->errtype = 0;
     return true;
 }
 
-Xtype** CopyMatr(const Xtype** matr1, const int& dsize_s, const int& dsize_c, Err& err)
+Xtype** CopyMatr(const Xtype** matr1, const int& dsize_s, const int& dsize_c, Err* err=nullptr)
 {
     Xtype** matr2 = nullptr;
     CreateMatr(matr2, dsize_s, dsize_c, err);
@@ -247,7 +247,7 @@ Xtype** CopyMatr(const Xtype** matr1, const int& dsize_s, const int& dsize_c, Er
     return matr2;
 }
 
-bool WriteMatr(function <bool(string&)> f_get_name, Xtype** matr, const int& dsize_s, const int& dsize_c, Err& err)
+bool WriteMatr(function <bool(string&)> f_get_name, Xtype** matr, const int& dsize_s, const int& dsize_c, Err* err=nullptr)
 {
     string FileName;
     cout << "\nЗапись в файл:";
@@ -267,7 +267,7 @@ bool WriteMatr(function <bool(string&)> f_get_name, Xtype** matr, const int& dsi
             file.close();
             return true;
         }
-        err.errtype = 'o';
+        err->errtype = 'o';
     }
     return false;
 }
@@ -299,7 +299,7 @@ void CoutMatr(Xtype** matr, const int& dsize_s, const int& dsize_c)         ////
     }
 }
 
-void ResultFunc(Xtype** matr, const int& dsize_s, const int& dsize_c, Err& err)
+void ResultFunc(Xtype** matr, const int& dsize_s, const int& dsize_c)
 {
     for (int i = 0, j = 0; i < dsize_s; i++, j++)
         if (*(*(matr + i) + j) < 0)
@@ -339,15 +339,15 @@ int main()
     {
         string FileAdress;
         int dsize_c = 0, dsize_s = 0;
-        if (!LoadMatr(GetFileName, matr, FileAdress, dsize_s, dsize_c, err))
+        if (!LoadMatr(GetFileName, matr, FileAdress, dsize_s, dsize_c, &err))
         {
-            if (ErrCheck(FileAdress, dsize_s, dsize_c, err))
+            if (ErrCheck(FileAdress, dsize_s, dsize_c, &err))
                 continue;
         }
         else
         {
             CoutMatr(matr, dsize_s, dsize_c);
-            ResultFunc(matr, dsize_s, dsize_c, err);
+            ResultFunc(matr, dsize_s, dsize_c);
             CoutMatr(matr, dsize_s, dsize_c);
             //WriteMatr(GetFileName, matr, dsize_s, dsize_c, err);
             DeleteMatr(matr, dsize_s);
