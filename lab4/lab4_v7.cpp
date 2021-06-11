@@ -390,7 +390,7 @@ int main()
                 ErrCheck(FileAdress, status_code, &err); //функция обработки ошибок
             }
             ResultFunc(copymatr, dsize_s, dsize_c);                                                       //функция по заданию
-            CoutMatr(matr, dsize_s, dsize_c);                                                             // вывод начальной матрицы
+            CoutMatr(matr, dsize_s, dsize_c);                                                             //вывод начальной матрицы
             CoutMatr(copymatr, dsize_s, dsize_c);                                                         //вывод копии матрицы, после обработки функцией
             if ((status_code = WriteMatr(GetFileName, copymatr, FileAdress, dsize_s, dsize_c, &err)) > 0) //функция вывода в файл
                 ErrCheck(FileAdress, status_code, &err);                                                  //функция обработки ошибок
