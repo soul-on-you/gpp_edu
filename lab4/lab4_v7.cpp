@@ -161,7 +161,7 @@ void FReadMatr(ifstream &file, Xtype **matr, const int &dsize_s, const int &dsiz
     streamoff pos = file.tellg(); ///для чтения из случайного места: 1) сохраняем позицию
     file.clear();
     file.seekg(0);
-    for (int i = 0; i < dsize_s; i++)
+    for (int i = 0; i < dsize_s; i++)       ///или можно считать до pos
         for (int j = 0; j < dsize_c; j++)
             file >> *(*(matr + i) + j);
     file.clear();
