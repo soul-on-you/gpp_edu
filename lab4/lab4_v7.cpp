@@ -11,13 +11,20 @@
 using namespace std;
 typedef double Xtype;
 
-//char status_code{ 0 }; //0-good //-1-exit //'f'-failbit  //'e'-empty file  //'o'-file isn't open //'q'-non-quadr_matr //'s'-string difference //'a'-fail alloc memory
+#define Good 0
+#define Exit -1
+#define FailbitErr 'f'
+#define EmptyFileErr 'e'
+#define FileOpenErr 'o'
+#define NotSquareMatrixErr 'q'
+#define NotRectangularMatrixErr 'r'
+#define FailAllocMemmoryErr 'a'
 
 union ErrInfo
 {
     int dsize_s;
-    int dyn_elem;
-    struct fbit
+    int MemAllocStepID;
+    struct FbitInfo
     {
         int dsize_s;
         int dsize_c;
@@ -25,7 +32,7 @@ union ErrInfo
     } fbit;
 };
 
-bool GetFileName(string &tmp, const string &str)
+bool GetFileName(string &tmp, string *str = nullptr)
 {
     std::cin.sync_with_stdio(false);
     cout << str << "\nВведите имя файла (чтобы завершить работу программы, введите *): ";
@@ -40,7 +47,8 @@ bool IstreamElementCorCheck(istream &istr, ErrInfo *err = nullptr)
 {
     Xtype Xtemp;
     streamoff pos = istr.tellg();
-    if (!(istr >> Xtemp) || (istr.peek() != ' ' && istr.peek() != '\n' && istr.peek() != '\t' && istr.peek() != EOF))
+    char StreamCurElem;
+    if (!(istr >> Xtemp) || ((StreamCurElem = istr.peek()) != ' ' && StreamCurElem != '\n' && StreamCurElem != '\t' && StreamCurElem != EOF))
     {
         if (err)
             err->fbit.pos = pos;
@@ -51,8 +59,9 @@ bool IstreamElementCorCheck(istream &istr, ErrInfo *err = nullptr)
 
 char CheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
-    int dsize_all = 0;
-    while (!(file >> ws).eof())
+    int dsize_for_check = 0;
+    file >> ws;
+    while (!file.eof())
     {
         if (!IstreamElementCorCheck(file, err))
         {
@@ -61,7 +70,7 @@ char CheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullpt
                 err->fbit.dsize_s = dsize_s;
                 err->fbit.dsize_c = dsize_c;
             }
-            return 'f';
+            return FailbitErr;
         }
         dsize_c++;
         char tmp(0);
@@ -73,24 +82,33 @@ char CheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullpt
             case '\t':
             case ' ':
                 break;
-            case EOF:
             case '\n':
-                if (dsize_c)
+                file >> ws;
+                tmp = file.get();
+            case EOF:
+                dsize_s++;
+
+#ifdef checkRectangular_v1
+                if (!dsize_for_check)
+                    dsize_for_check = dsize_c;
+                else if (dsize_for_check != dsize_c)
+#else
+                dsize_for_check += dsize_c;
+                if (dsize_for_check % dsize_c || dsize_for_check / dsize_c != dsize_s)
+#endif
                 {
-                    dsize_s++;
-                    if (dsize_s > dsize_c)
-                    {
-                        return 'q';
-                    }
-                    dsize_all += dsize_c;
-                    if (dsize_all % dsize_c)
-                    {
-                        if (err)
-                            err->dsize_s = dsize_s;
-                        return 's';
-                    }
-                    if (tmp != EOF)
-                        dsize_c = 0;
+                    if (err)
+                        err->dsize_s = dsize_s;
+                    return NotRectangularMatrixErr;
+                }
+                if (dsize_s > dsize_c)
+                {
+                    return NotSquareMatrixErr;
+                }
+                if (tmp != EOF)
+                {
+                    dsize_c = 0;
+                    tmp = EOF;
                 }
                 break;
             default:
@@ -101,19 +119,20 @@ char CheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullpt
     }
     if (!dsize_s)
     {
-        return 'e';
+        return EmptyFileErr;
     }
-    dsize_c = dsize_all / dsize_s;
+    dsize_c = dsize_for_check / dsize_s; ///////////////////////!!!!!!!!!!ПРОВЕРИТЬ!!!!!!!!Скорее всего удалить надо
     if (dsize_s != dsize_c)
     {
-        return 'q';
+        return NotSquareMatrixErr;
     }
-    return 0;
+    return Good;
 }
 
 char SSCheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
-    int dsize_all = 0, pos_s = 0;
+    int dsize_for_check = 0;
+    streamoff pos_s = 0;
     while (!(file >> ws).eof())
     {
         string tmp;
@@ -121,51 +140,61 @@ char SSCheckMatr(ifstream &file, int &dsize_s, int &dsize_c, ErrInfo *err = null
         pos_s = file.tellg();
         getline(file, tmp);
         istringstream istr(tmp);
-        istr.clear();
-        while (!(istr >> ws).eof())
+        istr.clear(); /////////////////?
+        while (!istr.eof())
         {
             if (!(IstreamElementCorCheck(istr, err)))
             {
                 if (err)
                 {
+                    cout << "file pos = " << file.tellg() << " , str size = " << (streamoff)istr.str().size() << " , pos in str = " << err->fbit.pos << " , pos_s = " << pos_s << '\n';
                     err->fbit.pos += pos_s;
+                    /////убрать 152!!!!!!!!!!
+                    cout << "file pos = " << file.tellg() << " , str size = " << (streamoff)istr.str().size() << " , pos in str = " << err->fbit.pos << '\n';
                     err->fbit.dsize_s = dsize_s;
                     err->fbit.dsize_c = dsize_c;
                 }
-                return 'f';
+                return FailbitErr;
             }
             dsize_c++;
+            istr >> ws;
         }
         dsize_s++;
-        if (dsize_s > dsize_c)
-            return 'q';
-        dsize_all += dsize_c;
-        if (dsize_all % dsize_c)
+#ifdef checkRectangular_v1
+        if (!dsize_for_check)
+            dsize_for_check = dsize_c;
+        else if (dsize_for_check != dsize_c)
+#else
+        dsize_for_check += dsize_c;
+        if (dsize_for_check % dsize_c || dsize_for_check / dsize_c != dsize_s)
+#endif
         {
             if (err)
                 err->dsize_s = dsize_s;
-            return 's';
+            return NotRectangularMatrixErr;
         }
+        if (dsize_s > dsize_c)
+            return NotSquareMatrixErr;
     }
     if (!dsize_s)
-        return 'e';
+        return EmptyFileErr;
     if (dsize_s != dsize_c)
     {
-        return 'q';
+        return NotSquareMatrixErr;
     }
-    return 0;
+    return Good;
 }
 
 void FReadMatr(ifstream &file, Xtype **matr, const int &dsize_s, const int &dsize_c)
 {
-    streamoff pos = file.tellg();           ///для чтения из случайного места: 1) сохраняем позицию
+    streamoff pos = file.tellg(); ///для чтения из случайного места: 1) сохраняем позицию
     file.clear();
     file.seekg(0);
-    for (int i = 0; i < dsize_s; i++)       ///или можно считать до pos
+    for (int i = 0; i < dsize_s; i++) ///или можно считать до pos
         for (int j = 0; j < dsize_c; j++)
             file >> *(*(matr + i) + j);
     file.clear();
-    file.seekg(pos);                        ///для чтения из случайного места: 2) возвращаем позицию
+    file.seekg(pos); ///для чтения из случайного места: 2) возвращаем позицию
 }
 
 void DeleteMatr(Xtype **&matr, const int &dsize_s)
@@ -181,8 +210,8 @@ char CreateMatr(Xtype **&matr, const int &dsize_s, const int &dsize_c, ErrInfo *
     if (matr == nullptr)
     {
         if (err)
-            err->dyn_elem = 0;
-        return 'a';
+            err->MemAllocStepID = -1;
+        return FailAllocMemmoryErr;
     }
     for (int i = 0; i < dsize_s; i++)
     {
@@ -191,20 +220,16 @@ char CreateMatr(Xtype **&matr, const int &dsize_s, const int &dsize_c, ErrInfo *
         {
             DeleteMatr(matr, i);
             if (err)
-                err->dyn_elem = (i + 1);
-            return 'a';
+                err->MemAllocStepID = i;
+            return FailAllocMemmoryErr;
         }
     }
-    return 0;
+    return Good;
 }
 
-char LoadMatr(function<bool(string &, const string &)> f_get_adress, Xtype **&matr, string &FileAdress, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
+char LoadMatr(Xtype **&matr, string &FileAdress, int &dsize_s, int &dsize_c, ErrInfo *err = nullptr)
 {
     dsize_s = 0, dsize_c = 0;
-    if (!f_get_adress(FileAdress, "\nСчитывание из файла:"))
-    {
-        return -1;
-    }
     ifstream file(FileAdress, ios_base::in);
     if (file.is_open())
     {
@@ -223,7 +248,7 @@ char LoadMatr(function<bool(string &, const string &)> f_get_adress, Xtype **&ma
     }
     else
     {
-        return 'o';
+        return FileOpenErr;
     }
 }
 
@@ -235,7 +260,7 @@ void ErrCheck(const string &FileAdress, char &status_code, ErrInfo *err = nullpt
     {
         switch (status_code)
         {
-        case 'f':
+        case FailbitErr:
         {
             string tmp;
             ifstream file(FileAdress);
@@ -248,29 +273,29 @@ void ErrCheck(const string &FileAdress, char &status_code, ErrInfo *err = nullpt
                  << "\nФайл содержит некорректные значения\n";
         }
         break;
-        case 'e':
+        case EmptyFileErr:
             cout << "\nВ файле не оказалось значений, которые можно считать\n";
             break;
-        case 's':
+        case NotRectangularMatrixErr:
             cout << "\nНе правильный формат, количество элементов строки " << err->dsize_s << " не совпадает со стокой " << (err->dsize_s - 1) << '\n';
             break;
-        case 'q':
+        case NotSquareMatrixErr:
             cout << "\nНе правильный формат, матрица не кваратная\n";
             break;
-        case 'o':
+        case FileOpenErr:
             perror(("\nОшибка открытия файла с именем \"" + FileAdress + "\"").c_str());
             break;
-        case 'a':
-            if (!err->dyn_elem)
+        case FailAllocMemmoryErr:
+            if (err->MemAllocStepID == -1)
                 cout << "\nОшибка, не удалось выделить память под массив указателей\n";
             else
-                cout << "\nОшибка, не удалось выделить память под " << err->dyn_elem << " строку\n";
+                cout << "\nОшибка, не удалось выделить память под " << err->MemAllocStepID << " строку\n";
             break;
         default:
             cout << "\nОтсутствует обработка данного типа ошибки\n";
         }
     }
-    status_code = 0;
+    status_code = Good;
 }
 
 Xtype **CopyMatr(Xtype const *const *matr1, const int &dsize_s, const int &dsize_c, char &status_code, ErrInfo *err = nullptr)
@@ -283,27 +308,23 @@ Xtype **CopyMatr(Xtype const *const *matr1, const int &dsize_s, const int &dsize
     return matr2;
 }
 
-char WriteMatr(function<bool(string &, const string &)> f_get_name, Xtype const *const *matr, string &FileAdress, const int &dsize_s, const int &dsize_c, ErrInfo *err = nullptr)
+char WriteMatr(Xtype const *const *matr, string &FileAdress, const int &dsize_s, const int &dsize_c, ErrInfo *err = nullptr)
 {
-    if (f_get_name(FileAdress, "\nЗапись в файл:"))
+    ofstream file(FileAdress);
+    if (file.is_open())
     {
-        ofstream file(FileAdress);
-        if (file.is_open())
+        for (int i = 0; i < dsize_s; i++)
         {
-            for (int i = 0; i < dsize_s; i++)
+            for (int j = 0; j < dsize_c; j++)
             {
-                for (int j = 0; j < dsize_c; j++)
-                {
-                    file << *(*(matr + i) + j) << ' ';
-                }
-                file << '\n';
+                file << *(*(matr + i) + j) << ' ';
             }
-            file.close();
-            return 0;
+            file << '\n';
         }
-        return 'o';
+        file.close();
+        return Good;
     }
-    return -1;
+    return FileOpenErr;
 }
 
 template <typename N>
@@ -338,28 +359,28 @@ void CoutMatr(Xtype const *const *matr, const int &dsize_s, const int &dsize_c)
 
 void ResultFunc(Xtype **matr, const int &dsize_s, const int &dsize_c)
 {
-    for (int i = 0, j = 0; i < dsize_s; i++, j++)
-        if (*(*(matr + i) + j) < 0)
+    for (int r = 0; r < dsize_s; r++)
+        if (*(*(matr + r) + r) < 0)
         {
             for (int k = 0; k < dsize_c; k++)
             {
-                if (k == j)
+                if (k == r)
                     continue;
-                if (!(*(*matr + k)) && (*(*(matr + i) + k) > 0))
+                if (!(*(*matr + k)) && (*(*(matr + r) + k) > 0))
                 {
-                    cout << "\nЗамена столбца " << (i + 1) << " на строку " << (k + 1) << '\n';
+                    cout << "\nЗамена столбца " << (r + 1) << " на строку " << (k + 1) << '\n';
                     Xtype Xtemp;
                     for (int l = 0; l < dsize_c; l++)
                     {
-                        Xtemp = *(*(matr + i) + l);
-                        *(*(matr + i) + l) = *(*(matr + l) + k);
+                        Xtemp = *(*(matr + r) + l);
+                        *(*(matr + r) + l) = *(*(matr + l) + k);
                         *(*(matr + l) + k) = Xtemp;
                     }
                     break;
                 }
                 if (dsize_c - 1 == k)
                 {
-                    cout << "\nНеудалось найти замену для " << (i + 1) << " строки\n";
+                    cout << "\nНеудалось найти замену для " << (r + 1) << " строки\n";
                 }
             }
         }
@@ -375,7 +396,10 @@ int main()
     while (true)
     {
         string FileAdress;
-        status_code = LoadMatr(GetFileName, matr, FileAdress, dsize_s, dsize_c, &err); //функция загрузки матрицы
+        cout << "\nСчитывание из файла:";
+        if (!GetFileName(FileAdress))
+            break;
+        status_code = LoadMatr(matr, FileAdress, dsize_s, dsize_c, &err); //функция загрузки матрицы
         if (status_code > 0)
         {
             ErrCheck(FileAdress, status_code, &err);
@@ -389,17 +413,20 @@ int main()
             {
                 ErrCheck(FileAdress, status_code, &err); //функция обработки ошибок
             }
-            ResultFunc(copymatr, dsize_s, dsize_c);                                                       //функция по заданию
-            CoutMatr(matr, dsize_s, dsize_c);                                                             //вывод начальной матрицы
-            CoutMatr(copymatr, dsize_s, dsize_c);                                                         //вывод копии матрицы, после обработки функцией
-            if ((status_code = WriteMatr(GetFileName, copymatr, FileAdress, dsize_s, dsize_c, &err)) > 0) //функция вывода в файл
-                ErrCheck(FileAdress, status_code, &err);                                                  //функция обработки ошибок
-            DeleteMatr(matr, dsize_s);                                                                    //функция удаления матрицы
-            DeleteMatr(copymatr, dsize_s);                                                                //функция удаления копии матрицы
+            ResultFunc(copymatr, dsize_s, dsize_c); //функция по заданию
+            CoutMatr(matr, dsize_s, dsize_c);       //вывод начальной матрицы
+            CoutMatr(copymatr, dsize_s, dsize_c);   //вывод копии матрицы, после обработки функцией
+            cout << "\nЗапись в файл:";
+            if (!GetFileName(FileAdress))
+                break;
+            if ((status_code = WriteMatr(copymatr, FileAdress, dsize_s, dsize_c, &err)) > 0) //функция вывода в файл
+                ErrCheck(FileAdress, status_code, &err);                                     //функция обработки ошибок
+            DeleteMatr(matr, dsize_s);                                                       //функция удаления матрицы
+            DeleteMatr(copymatr, dsize_s);                                                   //функция удаления копии матрицы
             if (!status_code)
                 continue;
         }
-        if (status_code == -1)
+        if (status_code == Exit)
         {
             break;
         }

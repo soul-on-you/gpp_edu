@@ -34,19 +34,21 @@ using namespace std;
 template <typename Xtype>
 size_t TextVievSize(Xtype a, ios::fmtflags f = ios_base::dec | ios_base::fixed, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 
-void space(int needed, ostringstream& ostr)
+void space(int needed, ostringstream &ostr)
 {
     ostr << setw(needed) << setfill(' ') << "";
 }
-void assembly_stream(int num, const double& elem, ostringstream& number_stream, ostringstream& elem_stream)
+void assembly_stream(int num, const double &elem, ostringstream &number_stream, ostringstream &elem_stream)
 {
     int differences = TextVievSize(num) - TextVievSize(elem);
     if (number_stream.str().size() + abs(differences) > 80)
     {
-        cout << number_stream.str() << '\n' << elem_stream.str() << '\n' << '\n';
+        cout << number_stream.str() << '\n'
+             << elem_stream.str() << '\n'
+             << '\n';
         number_stream.str("Номера  |");
         elem_stream.str("Элемены |");
     }
@@ -128,18 +130,18 @@ void term_clear_screen()
 #endif
 }
 
-bool HashCheck(void const* buffer, size_t BUFFER_SIZE, size_t& HASH_SIZE, char* (&ChBUFFER))
+bool HashCheck(void const *buffer, size_t BUFFER_SIZE, size_t &HASH_SIZE, char *(&ChBUFFER))
 {
     boost::crc_basic<16> crc(0x3D65u, 0u, 0u, true, true);
     crc.process_bytes(buffer, BUFFER_SIZE);
     unsigned short hash1 = crc.checksum();
     crc = boost::crc_basic<16>(0x8408u, crc.get_initial_remainder(),
-        crc.get_final_xor_value(), crc.get_reflect_input(),
-        crc.get_reflect_remainder());
+                               crc.get_final_xor_value(), crc.get_reflect_input(),
+                               crc.get_reflect_remainder());
     crc.process_bytes(buffer, BUFFER_SIZE);
     unsigned short hash2 = crc.checksum();
     HASH_SIZE = TextVievSize(hash1) + TextVievSize(hash2);
-    ChBUFFER = new(nothrow) char[HASH_SIZE+1]; ////////+1 для char всегда нужно писать, запомнить
+    ChBUFFER = new (nothrow) char[HASH_SIZE + 1]; ////////+1 для char всегда нужно писать, запомнить
     if (!ChBUFFER)
     {
         cout << "\nНе удалось выделить память для проверки hash-функцией\n";
@@ -149,17 +151,17 @@ bool HashCheck(void const* buffer, size_t BUFFER_SIZE, size_t& HASH_SIZE, char* 
     _itoa(hash2, ChBUFFER + TextVievSize(hash1), 10);
     return true;
 }
-bool WriteHash(fstream& CRCHashFile, const string& FileAdress, const d_arr* buf_double, const int& dsize)
+bool WriteHash(fstream &CRCHashFile, const string &FileAdress, const d_arr *buf_double, const int &dsize)
 {
     size_t HASH_SIZE;
     CRCHashFile.open(FileAdress + ".crc", ios::out | ios::binary);
     if (!CRCHashFile.is_open())
     {
-        cout << "\nНе удалось сохранить хэш файла, "; //////////я не стал сильно усложнять с ручным вводом имени файла или еще чем-либо
-        return false;                                 //////////скорее всего у пользователя нет прав и могу еще об этом дописать или может 
-    }                                                 //////////нет прав на чтение, пока ничего не буду дописывать
-    char* hash = nullptr;                                               //char* hash = HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE);
-    HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE, hash);      //CRCHashFile.write(HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE), HASH_SIZE);
+        cout << "\nНе удалось сохранить хэш файла, ";              //////////я не стал сильно усложнять с ручным вводом имени файла или еще чем-либо
+        return false;                                              //////////скорее всего у пользователя нет прав и могу еще об этом дописать или может
+    }                                                              //////////нет прав на чтение, пока ничего не буду дописывать
+    char *hash = nullptr;                                          //char* hash = HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE);
+    HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE, hash); //CRCHashFile.write(HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE), HASH_SIZE);
     CRCHashFile.write(hash, HASH_SIZE);
     CRCHashFile.close();
     delete[] hash;
@@ -175,19 +177,21 @@ bool ReWriteHash(const char *hash)
     return false;
 }
 #else
-bool ReWriteHash(fstream& CRCHashFile, const d_arr* buf_double, const string& FileAdress, const int& dsize, char& mode, const char* hash, const int& HASH_SIZE, ostringstream & numberstr, ostringstream & elementstr)
+bool ReWriteHash(fstream &CRCHashFile, const d_arr *buf_double, const string &FileAdress, const int &dsize, char &mode, const char *hash, const int &HASH_SIZE, ostringstream &numberstr, ostringstream &elementstr)
 {
     cout << "\nВнимание, могли произойти ошибки при считывании\n\n";
     for (int i = 0; i < dsize; i++)
         assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
-    cout << numberstr.str() << '\n' << elementstr.str() << '\n' << '\n';
+    cout << numberstr.str() << '\n'
+         << elementstr.str() << '\n'
+         << '\n';
 
     char choice;
     while (true)
     {
         cout << "Выберите действие:\n"
-            << "1)На экран выведены корректные данные\n"
-            << "2)На экран выведены некорректные данные" << endl;
+             << "1)На экран выведены корректные данные\n"
+             << "2)На экран выведены некорректные данные" << endl;
         choice = hotkey_to_char(false);
         if (choice == '1' || choice == '2')
             break;
@@ -206,7 +210,7 @@ bool ReWriteHash(fstream& CRCHashFile, const d_arr* buf_double, const string& Fi
         CRCHashFile.write(hash, HASH_SIZE);
         CRCHashFile.close();
         delete[] hash;
-        //mode = '3';          /////заранее был вывод из 3 пункта меню, без передачи управления, нет смысла снова выводит таблицу 
+        //mode = '3';          /////заранее был вывод из 3 пункта меню, без передачи управления, нет смысла снова выводит таблицу
         term_clear_screen();
         return true;
     }
@@ -216,7 +220,7 @@ bool ReWriteHash(fstream& CRCHashFile, const d_arr* buf_double, const string& Fi
 int main()
 {
     bool power = true, clearterm = false;
-    d_arr* buf_double = nullptr;
+    d_arr *buf_double = nullptr;
     int dsize;
     char mode = '0';
     string FileAdress;
@@ -235,11 +239,11 @@ int main()
         else
         {
             cout << "1) Создать исходные данные\n"
-                << "2) Считать данные\n"
-                << "3) Вывести исходные данные на экран\n"
-                << "4) Обработать данные по алгоритму функции\n"
-                << "5) Завершиен работы\n"
-                << "Выберите режим работы: " << endl;
+                 << "2) Считать данные\n"
+                 << "3) Вывести исходные данные на экран\n"
+                 << "4) Обработать данные по алгоритму функции\n"
+                 << "5) Завершиен работы\n"
+                 << "Выберите режим работы: " << endl;
             mode = hotkey_to_char(false);
         }
         cout << '\n';
@@ -278,7 +282,7 @@ int main()
                     delete[] buf_double;
                 }
 
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     cout << "\nОшибка выделения оперативной памяти\n";
@@ -295,13 +299,13 @@ int main()
 #endif
                     cin.ignore(cin.rdbuf()->in_avail(), '\n');
                     if (cin.peek() == '*' && cin.rdbuf()->in_avail() == 2)
-                    {                                                       //cout << "\ncin peek = " << cin.peek() << " elem in cin " << cin.rdbuf()->in_avail() << '\n';
+                    { //cout << "\ncin peek = " << cin.peek() << " elem in cin " << cin.rdbuf()->in_avail() << '\n';
                         clearterm = true;
                         break;
                     }
 #ifdef LINUX
                     std::cin.sync_with_stdio(true);
-#endif              
+#endif
                     cin >> buf_double[i];
                     if (cin.peek() != '\n')
                     {
@@ -332,9 +336,9 @@ int main()
                         while (true)
                         {
                             cout << "\nФайл с именем \"" << FileAdress << "\" уже существует, вы хотите:\n"
-                                << "1)Перезаписать файл\n"
-                                << "2)Указать новое имя файла\n"
-                                << "3)Продолжить выполение программы без сохранения" << endl;
+                                 << "1)Перезаписать файл\n"
+                                 << "2)Указать новое имя файла\n"
+                                 << "3)Продолжить выполение программы без сохранения" << endl;
                             choice = hotkey_to_char(false);
                             if (choice == '1' || choice == '2' || choice == '3')
                                 break;
@@ -352,12 +356,12 @@ int main()
                         perror(("\nОшибка открытия файла с именем \"" + FileAdress + "\"").c_str());
                         continue;
                     }
-                    file.write((char*)buf_double, sizeof(d_arr) * dsize);       //for (int i = 0; i < dsize; i++)
-                    file.close();                                               //file.write((char*)(buf_double + i), sizeof(d_arr));
+                    file.write((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                    file.close();                                          //file.write((char*)(buf_double + i), sizeof(d_arr));
 
                     if (!(WriteHash(CRCHashFile, FileAdress, buf_double, dsize)))
-                        break;                              ///////можно continue, если есть файл с именем хэш-файла, но нет прав на запись, 
-                    break;                                  ///////и тогда нужно попросить новое имя или результат ошибки в булевскую переменную и дальше что-то еще далать
+                        break; ///////можно continue, если есть файл с именем хэш-файла, но нет прав на запись,
+                    break;     ///////и тогда нужно попросить новое имя или результат ошибки в булевскую переменную и дальше что-то еще далать
                 }
                 break;
             }
@@ -386,7 +390,8 @@ int main()
                 /*if (buf_double)            этот вариант, если необходимо как можно эффективнее работать с памятью,
                 {                            тут можно подумать так, если пользователь ввел ВЕРНОЕ имя, значит он
                     delete[] buf_double;     намеревается начать работу с новым файлом, и старый массив данных ему 
-                }*/                        //уже не нужен, но нормально ли открылся файл, уже не так важно, т.к. старый отработан и все
+                }*/
+                //уже не нужен, но нормально ли открылся файл, уже не так важно, т.к. старый отработан и все
 #ifndef filesize_v2
 #ifndef filesize_v1
                 file.seekg(0, ios::end);
@@ -396,8 +401,8 @@ int main()
                 file.ignore(INT32_MAX, EOF);
                 dsize = file.gcount();
 #endif
-#else           
-                dsize = experimental::filesystem::file_size(FileAdress);            
+#else
+                dsize = experimental::filesystem::file_size(FileAdress);
 #endif
                 if (dsize % sizeof(d_arr))
                 {
@@ -412,22 +417,22 @@ int main()
                     file.close();
                     cout << "\nВ файле не оказалось значений, которые можно считать\n";
                     continue;
-                }                           // этот вариант подходит, если пользователь думал, что в файле есть данные
-                if (buf_double)             // и хорошо бы их получить, но раз файл пустой или нарушена целостность,
-                {                           // можно оставить массив в памяти, например, в нем хранились бы номера файлов 
-                    delete[] buf_double;    // или еще какая-либо, информация к которой после отработки
-                }                           // загруженного файла, все равно бы пришлось обратиться
-                buf_double = new(nothrow) d_arr[dsize];
+                }                        // этот вариант подходит, если пользователь думал, что в файле есть данные
+                if (buf_double)          // и хорошо бы их получить, но раз файл пустой или нарушена целостность,
+                {                        // можно оставить массив в памяти, например, в нем хранились бы номера файлов
+                    delete[] buf_double; // или еще какая-либо, информация к которой после отработки
+                }                        // загруженного файла, все равно бы пришлось обратиться
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     file.close();
                     cout << "\nОшибка выделения оперативной памяти\n";
                     continue;
                 }
-                file.seekg(0);                                                  //file.clear();
-                file.read((char*)buf_double, sizeof(d_arr) * dsize);            //for (int i = 0; i < dsize; i++)
-                file.close();                                                   //file.read((char*)(buf_double + i), sizeof(d_arr));
-                
+                file.seekg(0);                                        //file.clear();
+                file.read((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                file.close();                                         //file.read((char*)(buf_double + i), sizeof(d_arr));
+
                 CRCHashFile.open(FileAdress + ".crc", ios::in | ios::binary);
                 if (!CRCHashFile.is_open())
                 {
@@ -439,7 +444,7 @@ int main()
                 {
                     size_t HASH_SIZE_old, HASH_SIZE;
                     HASH_SIZE_old = experimental::filesystem::file_size(FileAdress + ".crc");
-                    char* hash = nullptr;                                   //char* hash = HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE);
+                    char *hash = nullptr;                                          //char* hash = HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE);
                     HashCheck(buf_double, dsize * sizeof(d_arr), HASH_SIZE, hash); ///////получаю еще и массив до сравнения, чтобы снова не вызывать функцию
                     if (HASH_SIZE != HASH_SIZE_old)
                     {
@@ -450,9 +455,9 @@ int main()
                             continue;
                     }
                     bool hash_err = false;
-                    char* hash_old = new char[HASH_SIZE_old+1];
-                    for(int i=0; i<HASH_SIZE; i++)
-                        CRCHashFile.read((hash_old + i), sizeof(char));          ////CRCHashFile.read(hash_old, HASH_SIZE_old); /////не подходит из-за иероглифов которые объединяют 2 байта в 1 символ
+                    char *hash_old = new char[HASH_SIZE_old + 1];
+                    for (int i = 0; i < HASH_SIZE; i++)
+                        CRCHashFile.read((hash_old + i), sizeof(char)); ////CRCHashFile.read(hash_old, HASH_SIZE_old); /////не подходит из-за иероглифов которые объединяют 2 байта в 1 символ
                     CRCHashFile.close();
                     for (int i = 0; i < HASH_SIZE && !hash_err; i++)
                     {
@@ -466,7 +471,7 @@ int main()
                             }
                         }
                         //if (HASH_SIZE - i == 1) ////////////тут можно раскоментить и проверить, все работает
-                            //cout << "\nхэши совпадают\n";
+                        //cout << "\nхэши совпадают\n";
                     }
                     delete[] hash_old;
                     if (hash_err)
@@ -483,7 +488,9 @@ int main()
             }
             for (int i = 0; i < dsize; i++)
                 assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
-            cout << numberstr.str() << '\n' << elementstr.str() << '\n' << '\n';
+            cout << numberstr.str() << '\n'
+                 << elementstr.str() << '\n'
+                 << '\n';
             break;
         case '4':
             if (!buf_double)
@@ -498,7 +505,8 @@ int main()
                     S2 += pow(buf_double[i], 2);
             }
             Smax = S1 > S2 ? S1 : S2;
-            cout << "\nРезультат работы Smax = " << Smax << '\n' << '\n';
+            cout << "\nРезультат работы Smax = " << Smax << '\n'
+                 << '\n';
             break;
         case '5':
             power = false;

@@ -1,6 +1,9 @@
 //#define checkRectangular_v1
 //#define allocmemory_secure
+#define allocmemory_try_catch_method
 //#define checkMatr_v1
+//#define SScheckforPos_v2
+#define LINUX
 
 #include <iostream>
 #include <stdio.h>
@@ -52,6 +55,27 @@ bool GettingNameOrExit(string &tmp, char SymForExit)
     return true;
 }
 
+//функция от 2 исключаемых и неисключаемых флагов
+template <typename N>
+size_t TextVievSize(N a, ios::fmtflags basefield = ios_base::dec, ios::fmtflags floatfield = ios_base::fixed, ios::fmtflags flags = (ios::fmtflags)0, int prec = 6)
+{
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios::basefield | ios::floatfield) << setiosflags(basefield | floatfield | flags) << setprecision(prec) << a)).str().size();
+}
+
+template <typename N>
+size_t TextVievSize_v2(N a, ios::fmtflags flags = (ios::fmtflags)0, int prec = 6)
+{
+    ios::fmtflags resetflags = (ios::fmtflags)0;
+    if (flags)
+    {
+        if (flags & ios::basefield)
+            resetflags = resetflags | ios::basefield;
+        if (flags & ios::floatfield)
+            resetflags = resetflags | ios::floatfield;
+    }
+    return ((ostringstream &)(ostringstream() << resetiosflags(resetflags) << setiosflags(flags) << setprecision(prec) << a)).str().size();
+}
+
 bool IstreamElementCorCheck(istream &istr, ErrInfo *err = nullptr)
 {
     Xtype Xtemp;
@@ -60,10 +84,14 @@ bool IstreamElementCorCheck(istream &istr, ErrInfo *err = nullptr)
     if (!(istr >> Xtemp) || ((StreamCurElem = istr.peek()) != ' ' && StreamCurElem != '\n' && StreamCurElem != '\t' && StreamCurElem != EOF))
     {
         if (err)
-#ifdef checkMatr_v1
+#if defined(checkMatr_v1) || defined(SScheckforPos_v2)
             err->fbit.pos = pos;
 #else
-            err->fbit.pos = pos - istr.tellg();
+        {
+            istr.clear();
+            istr.seekg(0, ios::end);
+            err->fbit.pos = istr.tellg() - pos;
+        }
 #endif
         return false;
     }
@@ -108,7 +136,9 @@ char CheckMatr(ifstream &file, int &matr_str, int &matr_column, ErrInfo *err = n
                 else if (size_for_check != matr_column)
 #else
                 size_for_check += matr_column;
-                if (size_for_check % matr_column || size_for_check / matr_column != matr_str)
+                //if (size_for_check % matr_column || size_for_check / matr_column != matr_str)
+                ////новы вариант 141
+                if (size_for_check != matr_str * matr_column)
 #endif
                 {
                     if (err)
@@ -142,6 +172,7 @@ char SSCheckMatr(ifstream &file, int &matr_str, int &matr_column, ErrInfo *err =
     {
         string tmp;
         matr_column = 0;
+        //streamoff pos_s=file.tellg(); было, теперь нет лишних действий, если нет ошибки
         getline(file, tmp);
         istringstream istr(tmp);
         while (!istr.eof())
@@ -150,7 +181,29 @@ char SSCheckMatr(ifstream &file, int &matr_str, int &matr_column, ErrInfo *err =
             {
                 if (err)
                 {
-                    err->fbit.pos = file.tellg() - err->fbit.pos;
+#ifdef SScheckforPos_v2
+                    istr.clear();
+                    istr.seekg(err->fbit.pos, ios::beg);
+                    istr >> tmp;
+                    streamoff SS_pos;
+                    if ((SS_pos = istr.tellg()) == EOF)
+                    {
+                        istr.clear();
+                        istr.seekg(0, ios::end);
+                        SS_pos = istr.tellg();
+                    }
+#ifdef LINUX
+                    err->fbit.pos = file.tellg() - ((streamoff)istr.str().size() - (istr.tellg() - (streamoff)tmp.size())) - (streamoff)1;
+#else
+                    err->fbit.pos = file.tellg() - ((streamoff)istr.str().size() - (SS_pos - (streamoff)tmp.size())) - (streamoff)2;
+#endif
+#else
+#ifdef LINUX
+                    err->fbit.pos = file.tellg() - err->fbit.pos - (streamoff)1;
+#else
+                    err->fbit.pos = file.tellg() - err->fbit.pos - (streamoff)2;
+#endif
+#endif
                     err->fbit.matr_str = matr_str;
                     err->fbit.matr_column = matr_column;
                 }
@@ -166,7 +219,9 @@ char SSCheckMatr(ifstream &file, int &matr_str, int &matr_column, ErrInfo *err =
         else if (size_for_check != matr_column)
 #else
         size_for_check += matr_column;
-        if (size_for_check % matr_column || size_for_check / matr_column != matr_str)
+        //if (size_for_check % matr_column || size_for_check / matr_column != matr_str)
+        ////новы вариант на 224
+        if (size_for_check != matr_str * matr_column)
 #endif
         {
             if (err)
@@ -199,6 +254,7 @@ void DeleteMatr(Xtype **&matr, int matr_str)
 }
 
 #ifndef allocmemory_secure
+#ifndef allocmemory_try_catch_method
 char CreateMatr(Xtype **&matr, int matr_str, int matr_column, ErrInfo *err = nullptr)
 {
     matr = new (nothrow) Xtype *[matr_str];
@@ -223,6 +279,27 @@ char CreateMatr(Xtype **&matr, int matr_str, int matr_column, ErrInfo *err = nul
 }
 
 #else
+char CreateMatr(Xtype **&matr, int matr_str, int matr_column, ErrInfo *err = nullptr)
+{
+    int i = -1;
+    try
+    {
+        matr = new Xtype *[matr_str];
+        for (int i = 0; i < matr_str; i++)
+            *(matr + i) = new Xtype[matr_column];
+    }
+    catch (bad_alloc)
+    {
+        DeleteMatr(matr, i);
+        if (err)
+            err->MemAllocStepID = i;
+        return FailAllocMemmoryErr;
+    }
+    return Good;
+}
+#endif
+
+#else ////////////убрать из конечной работы
 //CreateMatr_s
 char CreateMatr(Xtype **&matr, int matr_str, int matr_column, ErrInfo *err = nullptr)
 {
@@ -250,7 +327,7 @@ char CreateMatr(Xtype **&matr, int matr_str, int matr_column, ErrInfo *err = nul
 }
 #endif
 
-char LoadMatr(Xtype **&matr, string &FileAdress, int &matr_str, int &matr_column, ErrInfo *err = nullptr)
+char LoadMatr(Xtype **&matr, const string &FileAdress, int &matr_str, int &matr_column, ErrInfo *err = nullptr)
 {
     matr_str = 0, matr_column = 0;
     ifstream file(FileAdress, ios_base::in);
@@ -285,7 +362,7 @@ char LoadMatr(Xtype **&matr, string &FileAdress, int &matr_str, int &matr_column
 
 /*при вызове функции нельзя передавать аргументом параметр err, если до этого он не определялся, в другой функции,
  которую мы хотим проверить на наличие ошибок, иначе мы не получим корректную обработку*/
-char ErrCheck(const string &FileAdress, char status_code, ErrInfo *err = nullptr)
+void ErrCheck(const string &FileAdress, char status_code, ErrInfo *err = nullptr) ///прежний вариант char Errcheck
 {
     if (err)
     {
@@ -298,7 +375,7 @@ char ErrCheck(const string &FileAdress, char status_code, ErrInfo *err = nullptr
             file.seekg(err->fbit.pos);
             file >> tmp;
             file.close();
-            cout << "Найдена ошибка в элементе номер " << (err->fbit.matr_column + 1) << " на строке " << (err->fbit.matr_str + 1)
+            cout << "\nНайдена ошибка в элементе номер " << (err->fbit.matr_column + 1) << " на строке " << (err->fbit.matr_str + 1)
                  << "\nАбсолютная позиция в файле " << err->fbit.pos
                  << "\nНеверное значение: \"" << tmp << '\"' << '\n'
                  << "\nФайл содержит некорректные значения\n";
@@ -332,7 +409,9 @@ char ErrCheck(const string &FileAdress, char status_code, ErrInfo *err = nullptr
             cout << "\nОтсутствует обработка данного типа ошибки\n";
         }
     }
-    return Good;
+    else ///////или без else, но, врядли, он нужен, если мы выдаем полную информацию, а код ошибки дает сокращенную, получится какая-то тавтология
+        cout << "\nКод ошибки: " << status_code << '\n';
+    //////прежний вариант return Good;
 }
 
 Xtype **CopyMatr(Xtype const *const *matr, int matr_str, int matr_column, char &status_code, ErrInfo *err = nullptr)
@@ -345,22 +424,29 @@ Xtype **CopyMatr(Xtype const *const *matr, int matr_str, int matr_column, char &
     return matrcopy;
 }
 
-void WriteMatr(ostream &ostr, Xtype const *const *matr, int matr_str, int matr_column)
+void OutputMatr(ostream &ostr, Xtype const *const *matr, int matr_str, int matr_column, streamsize precition = 6, streamsize width = 0, ios::fmtflags flags = (ios::fmtflags)0)
 {
+    if (flags)
+    {
+        ios::fmtflags resetflags = (ios::fmtflags)0;
+        if (flags & ios::basefield)
+            resetflags = resetflags | ios::basefield;
+        if (flags & ios::floatfield)
+            resetflags = resetflags | ios::floatfield;
+        if (flags & ios::adjustfield)
+            resetflags = resetflags | ios::adjustfield;
+        ostr << resetiosflags(resetflags) << setiosflags(flags);
+    }
+    ostr << setprecision(precition);
     for (int i = 0; i < matr_str; i++)
     {
         for (int j = 0; j < matr_column; j++)
-            ostr << *(*(matr + i) + j) << ' ';
+            ostr << setw(width) << *(*(matr + i) + j) << ' ';
         ostr << '\n';
     }
 }
 
-template <typename N>
-size_t TextVievSize(N a, ios::fmtflags f = ios_base::dec | ios_base::fixed, int prec = 6)
-{
-    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield | ios_base::floatfield) << setiosflags(f) << setprecision(prec) << a)).str().size();
-}
-void CoutMatr(Xtype const *const *matr, int matr_str, int matr_column)
+void CoutMatr(ostream &ostr, Xtype const *const *matr, int matr_str, int matr_column)
 {
     ostringstream numberstr("|   |", ostringstream::ate);
     ostringstream skipstr("+---+", ostringstream::ate);
@@ -369,26 +455,26 @@ void CoutMatr(Xtype const *const *matr, int matr_str, int matr_column)
         skipstr << setw(12) << setfill('-') << '+';
         numberstr << setw(6 - TextVievSize(j) / 2 - TextVievSize(j) % 2) << "" << (j + 1) << setw(6 - TextVievSize(j) / 2) << '|';
     }
-    cout << '\n'
+    ostr << '\n'
          << skipstr.str() << '\n'
          << numberstr.str() << '\n'
          << skipstr.str() << '\n';
     for (int i = 0; i < matr_str; i++)
     {
-        cout << "| " << (i + 1) << " |";
+        ostr << "| " << (i + 1) << " |";
         for (int j = 0; j < matr_column; j++)
         {
-            cout << setw(10) << right << scientific << setprecision(2) << *(*(matr + i) + j) << " |";
+            ostr << setw(10) << right << scientific << setprecision(2) << *(*(matr + i) + j) << " |";
         }
-        cout << endl
+        ostr << endl
              << skipstr.str() << '\n';
     }
 }
 
-void ResultFunc(Xtype **matr, int matr_str, int matr_column)
+void ResultFunc(Xtype **matr, int matr_str, int matr_column) /////Xtype ResultFunc (Xtype** matr, int matr_str, int matr_column)
 {
-    for (int i = 0, j = 0; i < matr_str; i++, j++)
-        if (*(*(matr + i) + j) < 0)
+    for (int i = 0, j = 0; i < matr_str; i++, j++) //в задании нужно делать замену строки на столбец, если на главной диагонали отрицательное значение
+        if (*(*(matr + i) + j) < 0)                //и, кажется, мало смысла в лишних действиях, когда меняем отрицательное число на отриательное
         {
             for (int k = 0; k < matr_column; k++)
             {
@@ -396,7 +482,7 @@ void ResultFunc(Xtype **matr, int matr_str, int matr_column)
                     continue;
                 if (!(*(*matr + k)) && (*(*(matr + i) + k) > 0))
                 {
-                    cout << "\nЗамена столбца " << (i + 1) << " на строку " << (k + 1) << '\n';
+                    cout << "\nЗамена столбца " << (i + 1) << " на строку " << (k + 1) << '\n'; ///////////удалить
                     Xtype Xtemp;
                     for (int l = 0; l < matr_column; l++)
                     {
@@ -408,17 +494,18 @@ void ResultFunc(Xtype **matr, int matr_str, int matr_column)
                 }
                 if (matr_column - 1 == k)
                 {
-                    cout << "\nНеудалось найти замену для " << (i + 1) << " строки\n";
+                    cout << "\nНеудалось найти замену для " << (i + 1) << " строки\n"; ///////////удалить
                 }
             }
         }
+    /////return matr;
 }
 
 int main()
 {
     Xtype **matr = nullptr;
     ErrInfo err;
-    int matr_column = 0, matr_str = 0;
+    int matr_column, matr_str;
     char status_code = Good;
     setlocale(LC_ALL, "ru");
     while (status_code == Good)
@@ -432,44 +519,45 @@ int main()
 
         if ((status_code = LoadMatr(matr, FileAdress, matr_str, matr_column, &err)) != Good) //функция загрузки матрицы
         {
-            status_code = ErrCheck(FileAdress, status_code, &err);
+            ErrCheck(FileAdress, status_code, &err); //status_code = ErrCheck(FileAdress, status_code, &err); прежний вариант
+            status_code = Good;
             continue;
         }
-        else if (status_code == Good)
+
+        CoutMatr(cout, matr, matr_str, matr_column);                                 //фунция форматированного вывода в консоль
+        Xtype **copymatr = CopyMatr(matr, matr_str, matr_column, status_code, &err); //создание копии матрицы
+        if (status_code != Good)                                                     /////или if(copymatr == nullptr)
         {
-            CoutMatr(matr, matr_str, matr_column);                                       //фунция форматированного вывода в консоль
-            Xtype **copymatr = CopyMatr(matr, matr_str, matr_column, status_code, &err); //создание копии матрицы
-            if (status_code != Good)                                                     /////или if(copymatr == nullptr)
-            {
-                status_code = ErrCheck(FileAdress, status_code, &err); //функция обработки ошибок
-            }
-            else
-            {
-                ResultFunc(copymatr, matr_str, matr_column); //функция по заданию
-                CoutMatr(matr, matr_str, matr_column);       //вывод начальной матрицы
-                CoutMatr(copymatr, matr_str, matr_column);   //вывод копии матрицы, после обработки функцией
-                cout << "\nЗапись в файл:\nВведите имя файла (чтобы завершить работу программы, введите *): ";
-                while (true)
-                {
-                    if (GettingNameOrExit(FileAdress, '*'))
-                    {
-                        ofstream file(FileAdress);
-                        if (file.is_open())
-                            WriteMatr(file, matr, matr_str, matr_column);
-                        else
-                        {
-                            status_code = FileOpenErr;
-                            status_code = ErrCheck(FileAdress, status_code, &err);
-                        }
-                    }
-                    else
-                        status_code = Exit;
-                    break;
-                }
-                DeleteMatr(copymatr, matr_str); //функция удаления копии матрицы
-            }
-            DeleteMatr(matr, matr_str); //функция удаления матрицы
+            ErrCheck(FileAdress, status_code, &err); //функция обработки ошибок & //status_code = ErrCheck(FileAdress, status_code, &err); прежний вариант
+            status_code = Good;
         }
+        else
+        {
+            ResultFunc(copymatr, matr_str, matr_column); //функция по заданию
+            //CoutMatr(matr, matr_str, matr_column);       //вывод начальной матрицы  ////////УДАЛИТЬ!!!
+            CoutMatr(cout, copymatr, matr_str, matr_column); //вывод копии матрицы, после обработки функцией
+            cout << "\nЗапись в файл:\nВведите имя файла (чтобы завершить работу программы, введите *): ";
+            while (true)
+            {
+                if (GettingNameOrExit(FileAdress, '*'))
+                {
+                    ofstream file(FileAdress);
+                    if (file.is_open())
+                        OutputMatr(file, matr, matr_str, matr_column);
+                    else
+                    {
+                        status_code = FileOpenErr;
+                        ErrCheck(FileAdress, status_code, &err); //status_code = ErrCheck(FileAdress, status_code, &err); прежний вариант
+                        status_code = Good;
+                    }
+                }
+                else
+                    status_code = Exit;
+                break;
+            }
+            DeleteMatr(copymatr, matr_str); //функция удаления копии матрицы
+        }
+        DeleteMatr(matr, matr_str); //функция удаления матрицы
     }
     return 0;
 }
