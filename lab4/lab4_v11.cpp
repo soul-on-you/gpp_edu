@@ -44,9 +44,7 @@ union ErrInfo
 streamoff GetOffSet()
 {
     ofstream tmp("tafsfgqts;№№443fd4$dfg42tr3214sdsdff32423", ios::out);
-    tmp << '\n'
-        << "";
-    streamoff PlatformOffSet = (tmp.seekp(0, ios::end)).tellp();
+    streamoff PlatformOffSet = (tmp << '\n').tellp();
     tmp.close();
     remove("tafsfgqts;№№443fd4$dfg42tr3214sdsdff32423");
     return PlatformOffSet;

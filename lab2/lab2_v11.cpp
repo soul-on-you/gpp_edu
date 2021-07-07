@@ -36,7 +36,10 @@ size_t TextVievSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
     return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
-
+/*
+int i= 0x 00 B0 AC DE -> DE AC B0 00
+file: DE AC B0 00
+*/
 void space(int needed, ostringstream &ostr)
 {
     ostr << setw(needed) << setfill(' ') << "";
