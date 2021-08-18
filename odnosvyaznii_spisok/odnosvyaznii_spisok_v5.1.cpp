@@ -8,6 +8,7 @@
 
 #define noLoop -1
 #define Empty 0
+#define lastItem (_listLength - 1)
 
 struct UserData
 {
@@ -15,7 +16,7 @@ struct UserData
     int developer_id;
     char code[12];
     char name[45];
-    void printData()
+    void printData() const
     {
         std::cout << "Worker name: " << name << " developer id = " << developer_id << " code: " << code << '\n';
     }
@@ -31,29 +32,34 @@ class SinglyLinkedList
 {
     ListItem *_head;
     int _chainIndex;
-    int _listLenght;
+    int _listLength;
 
 public:
     SinglyLinkedList(const int count = 0, const UserData *_UserData = nullptr, const int LoopedOnID = noLoop) : _chainIndex(LoopedOnID)
     {
-        _head = nullptr, _listLenght = 0;
+        _head = nullptr, _listLength = 0;
         if (count > 0)
         {
             ListItem *prevItem = nullptr;
             for (int i = 0; i < count; i++)
             {
                 ListItem *newItem;
-                this->createItem(newItem);
-                if (!newItem)
+                // this->createItem(newItem);
+                // if (!newItem)
+                // {
+                //     ListRemove();
+                //     return;
+                // }
+                // newItem->_UserData = _UserData[i];
+                // if (!_head)
+                //     _head = newItem;
+                // else
+                //     prevItem->next = newItem;
+                if (!(this->connectItem(newItem = this->createItem(&_UserData[i]), prevItem)))
                 {
                     ListRemove();
                     return;
                 }
-                newItem->_UserData = _UserData[i];
-                if (!_head)
-                    _head = newItem;
-                else
-                    prevItem->next = newItem;
                 prevItem = newItem;
             }
             if (_head)
@@ -91,22 +97,28 @@ public:
     }
     SinglyLinkedList(const SinglyLinkedList &List) : _chainIndex(List._chainIndex)
     {
-        _head = nullptr, _listLenght = 0; // _chainIndex = List._chainIndex,
+        _head = nullptr, _listLength = 0; // _chainIndex = List._chainIndex,
         ListItem *prevItem = nullptr;
-        for (ListItem *curItem = List._head; _listLenght != List._listLenght; curItem = curItem->next)
+        for (ListItem *curItem = List._head; _listLength != List._listLength; curItem = curItem->next)
         {
             ListItem *newItem;
-            this->createItem(newItem);
-            if (!newItem)
+            // this->createItem(newItem);
+            // if (!newItem)
+            // {
+            //     ListRemove();
+            //     return;
+            // }
+            // newItem->_UserData = curItem->_UserData;
+            // if (!_head)
+            //     _head = newItem;
+            // else
+            //     prevItem->next = newItem;
+            // prevItem = newItem;
+            if (!(this->connectItem(newItem = this->createItem(&curItem->_UserData), prevItem)))
             {
                 ListRemove();
                 return;
             }
-            newItem->_UserData = curItem->_UserData;
-            if (!_head)
-                _head = newItem;
-            else
-                prevItem->next = newItem;
             prevItem = newItem;
         }
         if (_chainIndex == noLoop)
@@ -115,7 +127,7 @@ public:
         }
         else
         {
-            if (_chainIndex + 1 == _listLenght)
+            if (_chainIndex + 1 == _listLength)
                 prevItem->next = prevItem;
             else
                 prevItem->next = this->appeal(_chainIndex);
@@ -124,18 +136,18 @@ public:
     void ListRemove()
     {
         // if (_chainIndex != noLoop)
-        //     for (ListItem *tmp = _head; _listLenght; _head = _head->next, delete tmp, tmp = _head, _listLenght--)
+        //     for (ListItem *tmp = _head; _listLength; _head = _head->next, delete tmp, tmp = _head, _listLength--)
         //         ;
         // else
         //     for (ListItem *tmp = _head; _head; _head = _head->next, delete tmp, tmp = _head)
         //         ;
-        for (ListItem *tmp = _head; _listLenght; _head = _head->next, delete tmp, tmp = _head, _listLenght--)
+        for (ListItem *tmp = _head; _listLength; _head = _head->next, delete tmp, tmp = _head, _listLength--)
             ;
-        _chainIndex = noLoop, _head = nullptr; //_listLenght = Empty
+        _chainIndex = noLoop, _head = nullptr; //_listLength = Empty
     }
     void ListAddItem(const int addIndex, const UserData *_UserData)
     {
-        if (_listLenght >= addIndex)
+        if (_listLength >= addIndex)
         {
             ListItem *curItem = _head, *prevItem = nullptr;
             if (_head && addIndex)
@@ -144,30 +156,33 @@ public:
                     if (i == addIndex)
                     {
                         // prevItem=&_head[addIndex-1], curItem=&_head[addIndex];
-                        ListItem *newItem;
-                        this->createItem(newItem);
-                        if (newItem)
-                        {
-                            newItem->_UserData = *_UserData;
-                            prevItem->next = newItem;
-                            newItem->next = curItem;
-                        }
+                        // ListItem *newItem;
+                        // this->createItem(newItem);
+                        // if (newItem)
+                        // {
+                        //     newItem->_UserData = *_UserData;
+                        //     prevItem->next = newItem;
+                        //     newItem->next = curItem;
+                        // }
+                        this->connectItem(this->createItem(_UserData), prevItem, curItem);
                         break;
                     }
             }
             else
             {
                 ListItem *newItem;
-                this->createItem(newItem);
-                if (newItem)
-                {
-                    if (_head)
-                        newItem->next = _head;
-                    else
-                        newItem->next = nullptr;
-                    newItem->_UserData = *_UserData;
-                    _head = newItem;
-                }
+                // this->createItem(newItem);
+                // if (newItem)
+                // {
+                //     if (_head)
+                //         newItem->next = _head;
+                //     else
+                //         newItem->next = nullptr;
+                //     newItem->_UserData = *_UserData;
+                //     _head = newItem;
+                // }
+                this->connectItem(newItem = this->createItem(_UserData), nullptr, _head);
+                _head = newItem;
             }
         }
         else
@@ -175,28 +190,32 @@ public:
     }
     void PushBack(const UserData *_UserData)
     {
-        ListItem *newItem;
-        this->createItem(newItem);
-        if (newItem)
-        {
-            ListItem *curItem = _head;
-            for (; curItem->next; curItem = curItem->next)
-                ;
-            curItem->next = newItem;
-            newItem->next = nullptr;
-            newItem->_UserData = *_UserData;
-        }
+        // ListItem *newItem;
+        // this->createItem(newItem);
+        // if (newItem)
+        // {
+        //     ListItem *curItem = _head;
+        //     for (; curItem->next; curItem = curItem->next)
+        //         ;
+        //     curItem->next = newItem;
+        //     newItem->next = nullptr;
+        //     newItem->_UserData = *_UserData;
+        // }
+        // ListItem *curItem = _head;
+        //     for (; curItem->next; curItem = curItem->next)
+        //         ;
+        this->connectItem(this->createItem(_UserData), this->appeal(lastItem));
     }
     void ListDeleteItem(const int delIndex, const int count = 1)
     {
-        if (_listLenght >= delIndex + count && _head)
+        if (_listLength >= delIndex + count && _head)
         {
             ListItem *curItem = _head, *prevItem = nullptr;
             for (int index = 0; index < delIndex; index++, prevItem = curItem, curItem = curItem->next)
                 ;
             if (curItem != _head)
             {
-                for (int i = 0; i < count; i++, _listLenght--, delete curItem)
+                for (int i = 0; i < count; i++, _listLength--, delete curItem)
                 {
                     if (i > 0)
                     {
@@ -211,7 +230,7 @@ public:
             }
             else
             {
-                for (int i = 0; i < count; i++, _listLenght--, delete curItem)
+                for (int i = 0; i < count; i++, _listLength--, delete curItem)
                 {
                     curItem = _head;
                     _head = _head->next;
@@ -240,7 +259,7 @@ public:
 
     ListItem *appeal(const int index) const
     {
-        if (_listLenght <= index)
+        if (_listLength <= index)
             return nullptr;
         ListItem *curItem = this->_head;
         for (int i = 0; i < index; i++, curItem = curItem->next)
@@ -286,7 +305,7 @@ public:
         if (findItem)
         {
             int i(0);
-            for (ListItem *curItem = _head; i != _listLenght; curItem = curItem->next, i++)
+            for (ListItem *curItem = _head; i != _listLength; curItem = curItem->next, i++)
                 if (curItem == findItem)
                     return i;
         }
@@ -296,14 +315,34 @@ public:
     {
         return _chainIndex;
     }
-    int getLenght() const
+    int getLength() const
     {
-        return _listLenght;
+        return _listLength;
     }
     bool isEmpty() const
     {
         return !((bool)_head);
     }
+    SinglyLinkedList operator=(const SinglyLinkedList &List)
+    {
+        SinglyLinkedList tmp(List);
+        return tmp;
+    }
+    ListItem *operator[](const int index)
+    {
+        if (_listLength <= index)
+            return nullptr;
+        ListItem *curItem = this->_head;
+        for (int i = 0; i < index; i++, curItem = curItem->next)
+            ;
+        return curItem;
+    }
+    // ListItem *operator<<(ListItem *List)
+    // {
+    //     List->_UserData.printData();
+    //     return List;
+    // }
+    // void operator<<(const SinglyLinkedList &List)
 
 protected:
     ListItem *newItem()
@@ -311,14 +350,36 @@ protected:
         ListItem *newItem = new (std::nothrow) ListItem;
         return newItem;
     }
-    void createItem(ListItem *&newItem)
+    ListItem *createItem(const UserData *_UserData)
     {
+        ListItem *newItem;
         if (!(newItem = this->newItem()))
         {
             std::cerr << "\nне удалось добавить элемент\n";
         }
         else
-            _listLenght++;
+            // _listLength++;
+            newItem->_UserData = *_UserData;
+        return newItem;
+    }
+    bool connectItem(ListItem *addedItem, ListItem *prevItem, ListItem *nextItem = nullptr)
+    {
+        if (addedItem)
+        {
+            if (!_head)
+                _head = addedItem;
+            else if (prevItem || nextItem)
+            {
+                if (prevItem)
+                    prevItem->next = addedItem;
+                addedItem->next = nextItem;
+            }
+            else
+                return false;
+            _listLength++;
+            return true;
+        }
+        return false;
     }
 };
 
@@ -482,8 +543,9 @@ int main()
     {
         std::cout << "\nList v6 is Empty\n";
     }
+    std::cout << "\nLov66 " << v6[1];
 
-    // тут я понял, что метод searchCycle_v2() работает неверно в большинстве случаев, а мне пару раз повезло.
+        // тут я понял, что метод searchCycle_v2() работает неверно в большинстве случаев, а мне пару раз повезло.
 #ifdef LoopChance100
     std::cout << '\n'
               << '\n';
@@ -500,38 +562,5 @@ int main()
         check(tmp);
     }
 #endif
-    // UserData dataForTmp[4]{1, 1, "dave", "1", 2, 2, "relLik", "13vova", 3, 3, "victor", "victor", 4, 4, "timopheii", "motoevacuator"};
-    // SinglyLinkedList test;
-    // SinglyLinkedList tmp(4, dataForTmp);
-    // std::cout << "\nall workers data:\n";
-    // tmp.PrintList();
-    // std::cout << "\nmy favotite worker:\n";
-    // tmp.PrintListWithIndex(1);
-    // UserData newWorker{6, 6, ".net332", "kravl"};
-    // std::cout << "\nadd new worker, and fire old useless\n";
-    // tmp.ListAddItem(4, &newWorker);
-    // tmp.ListDeleteItem(1);
-    // std::cout << "\nall workers data:\n";
-    // tmp.PrintList();
-    // std::cout << "\nmy favotite worker:\n";
-    // tmp.PrintListWithIndex(1);
-    // //test.ListRemove();
-    // // std::cout << "\nadd new item in empty list:\n";
-    // // UserData newTest{10, 10, "hello", "world"};
-    // // test.ListAddItem(0,&newTest);
-    // UserData dataForListWithLoop[4]{11, 728, "dkwjqe312ed", "iordan", 12, 732, "00elda2e9iu", "kenny", 13, 733, "u29we29ikod", "reqi", 14, 671, "koaskdo201s", "greg"};
-    // SinglyLinkedList listWithLoop(4, dataForListWithLoop, 2);
-    // if (listWithLoop.searchCycle_v1() && listWithLoop.searchCycle_v2())
-    // {
-    //     std::cout << "\nList looped on index " << listWithLoop.getIndexByAdress(listWithLoop.searchCycle_v1()) << ", cycle start on "
-    //               << listWithLoop.searchCycle_v1() << '\t' << " detected by searcbCycle_v1\n";
-    //     std::cout << "\nList looped on index " << listWithLoop.getIndexByAdress(listWithLoop.searchCycle_v2()) << ", cycle start on "
-    //               << listWithLoop.searchCycle_v2() << '\t' << " detected by searcbCycle_v2\n";
-    // }
-    // else
-    // {
-    //     std::cout << "\nList haven't loop\n";
-    //     listWithLoop.PrintList();
-    // }
     return 0;
 }
