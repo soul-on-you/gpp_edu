@@ -29,86 +29,88 @@ template <typename Xtype>
 Xtype ElemSize(Xtype a)
 {
     ostringstream tmp;
-    tmp<<a;
+    tmp << a;
     return tmp.str().size();
 }
 template <typename Xtype>
 Xtype ElemSize(Xtype a, ios::fmtflags f)
 {
     ostringstream tmp;
-    tmp<<setiosflags(f)<<a;
+    tmp << setiosflags(f) << a;
     return tmp.str().size();
 }
 template <typename Xtype>
 Xtype ElemSize(Xtype a, ios::fmtflags f, int prec)
 {
     ostringstream tmp;
-    tmp<<setiosflags(f)<<setprecision(prec)<<a;
+    tmp << setiosflags(f) << setprecision(prec) << a;
     return tmp.str().size();
 }
 
 string space(int needed)
 {
     string sp;
-    while (needed-sp.size())
+    while (needed - sp.size())
         sp += ' ';
     return sp;
 }
 void assembly_stream(int num, const double &elem, ostringstream &number_stream, ostringstream &elem_stream)
 {
-    int differences=ElemSize(num)-ElemSize(elem);
-    if(number_stream.str().size()+abs(differences)>80)
+    int differences = ElemSize(num) - ElemSize(elem);
+    if (number_stream.str().size() + abs(differences) > 80)
     {
-        cout<<number_stream.str()<<'\n'<<elem_stream.str()<<'\n'<<'\n';
+        cout << number_stream.str() << '\n'
+             << elem_stream.str() << '\n'
+             << '\n';
         number_stream.str("Номера  |");
         elem_stream.str("Элемены |");
     }
-    if(differences>0)
+    if (differences > 0)
     {
-        number_stream<<space(1)<<num<<space(1)<<"|";
-        elem_stream<<space(1+differences/2+differences%2)<<elem<<space(1+differences/2)<<"|";
+        number_stream << space(1) << num << space(1) << "|";
+        elem_stream << space(1 + differences / 2 + differences % 2) << elem << space(1 + differences / 2) << "|";
     }
-    else if(differences==0)
+    else if (differences == 0)
     {
-        number_stream<<space(1)<<num<<space(1)<<"|";
-        elem_stream<<space(1)<<elem<<space(1)<<"|";
+        number_stream << space(1) << num << space(1) << "|";
+        elem_stream << space(1) << elem << space(1) << "|";
     }
     else
     {
-        number_stream<<space(1+abs(differences)/2+abs(differences)%2)<<num<<space(1+abs(differences)/2)<<"|";
-        elem_stream<<space(1)<<elem<<space(1)<<"|";
+        number_stream << space(1 + abs(differences) / 2 + abs(differences) % 2) << num << space(1 + abs(differences) / 2) << "|";
+        elem_stream << space(1) << elem << space(1) << "|";
     }
 }
 
 #if defined LINUX && !defined LINUXV2
 static struct termios old, newattr;
-void initTermios(int echo) 
+void initTermios(int echo)
 {
-  tcgetattr(0, &old); 
-  newattr = old;
-  newattr.c_lflag &= ~ICANON;
-  newattr.c_lflag &= echo ? ECHO : ~ECHO;
-  tcsetattr(0, TCSANOW, &newattr);
+    tcgetattr(0, &old);
+    newattr = old;
+    newattr.c_lflag &= ~ICANON;
+    newattr.c_lflag &= echo ? ECHO : ~ECHO;
+    tcsetattr(0, TCSANOW, &newattr);
 }
-void resetTermios(void) 
+void resetTermios(void)
 {
-  tcsetattr(0, TCSANOW, &old);
+    tcsetattr(0, TCSANOW, &old);
 }
-char getch_(int echo) 
+char getch_(int echo)
 {
-  char ch;
-  initTermios(echo);
-  ch = getchar();
-  resetTermios();
-  return ch;
+    char ch;
+    initTermios(echo);
+    ch = getchar();
+    resetTermios();
+    return ch;
 }
-char getch(void) 
+char getch(void)
 {
-  return getch_(0);
+    return getch_(0);
 }
-char getche(void) 
+char getche(void)
 {
-  return getch_(1);
+    return getch_(1);
 }
 #endif
 
@@ -116,19 +118,19 @@ char hotkey_to_char(int echo)
 {
     char ch;
 #ifdef LINUX
-    #ifdef LINUXV2
+#ifdef LINUXV2
     system("stty raw");
-    ch= getchar();
+    ch = getchar();
     system("stty cooked");
     cin.clear();
-    #else
-    if(echo)
-        ch=getche();
-    else
-        ch=getch();
-    #endif
 #else
-    ch=_getch();
+    if (echo)
+        ch = getche();
+    else
+        ch = getch();
+#endif
+#else
+    ch = _getch();
 #endif
     return ch;
 }
@@ -136,34 +138,34 @@ char hotkey_to_char(int echo)
 int main()
 {
     bool power = true;
-    double *buf_double=nullptr;
-    int dsize=0;
+    double *buf_double = nullptr;
+    int dsize = 0;
 #ifdef withsave
-    int ndsize=0;
+    int ndsize = 0;
 #endif
     setlocale(LC_ALL, "ru");
-    while(power)
+    while (power)
     {
         char mode;
-        cout<<"\n1) Создать исходные данные\n"
-            <<"2) Считать данные\n"
-            <<"3) Вывести исходные данные на экран\n"
-            <<"4) Обработать данные по алгоритму функции\n"
-            <<"5) Завершиен работы\n"
+        cout << "\n1) Создать исходные данные\n"
+             << "2) Считать данные\n"
+             << "3) Вывести исходные данные на экран\n"
+             << "4) Обработать данные по алгоритму функции\n"
+             << "5) Завершиен работы\n"
 #ifdef critical
-            <<"6) Критический режим считывания (при появлении ошибки программа игнорирует неверное значение)\n"
+             << "6) Критический режим считывания (при появлении ошибки программа игнорирует неверное значение)\n"
 #endif
-            <<"Выберите режим работы: ";
-        mode=hotkey_to_char(true);
-        cout<<'\n';
-        int pos=0;
-        double dtemp=0, S1=0, S2=0, Smax=0;
-        ostringstream numberstr("Номера  |",ostringstream::ate),
-#ifdef critical 
-                      errlog(ostringstream::ate),
+             << "Выберите режим работы: ";
+        mode = hotkey_to_char(true);
+        cout << '\n';
+        int pos = 0;
+        double dtemp = 0, S1 = 0, S2 = 0, Smax = 0;
+        ostringstream numberstr("Номера  |", ostringstream::ate),
+#ifdef critical
+            errlog(ostringstream::ate),
 #endif
-                      elementstr("Элемены |",ostringstream::ate);
-                      
+            elementstr("Элемены |", ostringstream::ate);
+
 #ifdef SSTREAM
         string str;
         istringstream sstr;
@@ -171,25 +173,25 @@ int main()
         string tempstr, FileAdress;
         fstream file;
         char check;
-        bool err=false;
+        bool err = false;
         switch (mode)
         {
         case '1':
-            if(buf_double)
+            if (buf_double)
                 delete[] buf_double;
-            dsize=0;
-            while(true)
+            dsize = 0;
+            while (true)
             {
-                cout<<"\nВведите количество элементнов которое вы хотите добавить(чтобы вернуться *): ";
-                if(!(cin>>dsize) || (cin.peek()!='\n') || (dsize<=0))
+                cout << "\nВведите количество элементнов которое вы хотите добавить(чтобы вернуться *): ";
+                if (!(cin >> dsize) || (cin.peek() != '\n') || (dsize <= 0))
                 {
                     cin.clear();
                     getline(cin, tempstr);
-                    if(!dsize && tempstr=="*")
+                    if (!dsize && tempstr == "*")
                         break;
                     else
                     {
-                        cout<<"Введено недопустимое значение";
+                        cout << "Введено недопустимое значение";
                         cin.sync_with_stdio(false);
                         cin.ignore(cin.rdbuf()->in_avail(), '\n');
                         //cin.ignore(INT32_MAX, '\n');
@@ -197,35 +199,35 @@ int main()
                         continue;
                     }
                 }
-                cout<<"+++ dsize="<<dsize;
-                
-                buf_double=new(nothrow) d_arr[dsize];
-                if(buf_double=nullptr)
+                cout << "+++ dsize=" << dsize;
+
+                buf_double = new (nothrow) d_arr[dsize];
+                if (buf_double = nullptr)
                 {
-                    cout<<"\nОшибка выделения оперативной памяти\n";
+                    cout << "\nОшибка выделения оперативной памяти\n";
                     continue;
                 }
 
-                cout<<buf_double[0]<<' '<<buf_double[1];////////
-                cout<<"\nВведите значения для элементов(чтобы вернуться *):\n";
-                for(int i=0;i<dsize;i++)
+                cout << buf_double[0] << ' ' << buf_double[1]; ////////
+                cout << "\nВведите значения для элементов(чтобы вернуться *):\n";
+                for (int i = 0; i < dsize; i++)
                 {
-                    cout<<"\tЭлемент "<<(i+1)<<" = ";
-                    if(!(cin>>buf_double[i]) || (cin.peek()!='\n'))
+                    cout << "\tЭлемент " << (i + 1) << " = ";
+                    if (!(cin >> buf_double[i]) || (cin.peek() != '\n'))
                     {
                         cin.clear();
-                        cout<<"---";
-                        if(!dsize && cin.get()=='*' && cin.peek()=='\n')
+                        cout << "---";
+                        if (!dsize && cin.get() == '*' && cin.peek() == '\n')
                         {
 #ifdef withsave
-                            cout<<"Сохранить введенные данные?[Y/n]";
+                            cout << "Сохранить введенные данные?[Y/n]";
 #else
-                            cout<<"Полученные данные будут утеряны";
+                            cout << "Полученные данные будут утеряны";
 #endif
                         }
                         else
                         {
-                            cout<<"Введено недопустимое значение!\n";
+                            cout << "Введено недопустимое значение!\n";
                             cin.sync_with_stdio(false);
                             cin.ignore(cin.rdbuf()->in_avail(), '\n');
                             cin.sync_with_stdio(true);
@@ -234,121 +236,122 @@ int main()
                         }
                     }
                 }
-                file.write((char *) buf_double, sizeof(d_arr));
+                file.write((char *)buf_double, sizeof(d_arr));
                 file.close();
                 break;
             }
             break;
         case '2':
-            while(true)
+            while (true)
             {
-                if(buf_double)
+                if (buf_double)
                     delete[] buf_double;
-                cout<<"Введите имя файла(чтобы вернуться *): ";
+                cout << "Введите имя файла(чтобы вернуться *): ";
                 getline(cin, FileAdress);
-                if(FileAdress=="*")
+                if (FileAdress == "*")
                     break;
                 file.open(FileAdress, ios_base::in | ios_base::binary);
-                if(!(file.is_open()))
-                {   
+                if (!(file.is_open()))
+                {
                     perror(("\nОшибка открытия файла с именем " + FileAdress).c_str());
                     continue;
                 }
-                dsize=0;
+                dsize = 0;
 #ifndef filesize
-                while(!(file>>ws).eof()&&!err)
+                while (!(file >> ws).eof() && !err)
                 {
-                    pos=file.tellg();
+                    pos = file.tellg();
 #ifdef SSTREAM
-                    getline(file,str)
-                    sstr.str(str);
+                    getline(file, str)
+                        sstr.str(str);
                     sstr.clear();
-                    while(!sstr.eof())
-                    sstr>>dtemp;
-                    if(sstr.rdstate()!=ios::eofbit)
+                    while (!sstr.eof())
+                        sstr >> dtemp;
+                    if (sstr.rdstate() != ios::eofbit)
 #else
-                    if (!(file>>dtemp) || ((check=file.peek())!=' ' && check!='\n'
-                    && check!='\t' && check!=EOF))
+                    if (!(file >> dtemp) || ((check = file.peek()) != ' ' && check != '\n' && check != '\t' && check != EOF))
 #endif
                     {
-                        err=true;
+                        err = true;
                         break;
                     }
                     else
                         dsize++;
                 }
 #else
-                file.seekg(0,ios::end)
-                dsize=file.tellg();
-                if(dsize%sizeof(d_arr))
+                file.seekg(0, ios::end)
+                    dsize = file.tellg();
+                if (dsize % sizeof(d_arr))
                     file.close();
-#endif          
-                if(err)
+#endif
+                if (err)
                 {
-                        file.clear();
-                        file.seekg(pos);
-                        file >> tempstr;
-                        file.close();
-                        cout<<"\nНайдена ошибка в элементе номер "<<dsize
-                            <<"\nАбсолютная позиция в файле "<<pos
-                            <<"\nНеверное значение: "<<tempstr<<'\n';
-                        break;
+                    file.clear();
+                    file.seekg(pos);
+                    file >> tempstr;
+                    file.close();
+                    cout << "\nНайдена ошибка в элементе номер " << dsize
+                         << "\nАбсолютная позиция в файле " << pos
+                         << "\nНеверное значение: " << tempstr << '\n';
+                    break;
                 }
-                if(!dsize)
+                if (!dsize)
                 {
                     file.close();
-                    cout<<"В файле не оказалось значений, которые можно считать\n";
+                    cout << "В файле не оказалось значений, которые можно считать\n";
                     continue;
                 }
-                buf_double=new(nothrow) d_arr[dsize];
-                if(buf_double==nullptr)
+                buf_double = new (nothrow) d_arr[dsize];
+                if (buf_double == nullptr)
                 {
                     file.close();
-                    cout<<"\nОшибка выделения оперативной памяти\n";
+                    cout << "\nОшибка выделения оперативной памяти\n";
                     break;
                 }
                 file.seekg(0);
-                for(int i=0; i<dsize; i++)
+                for (int i = 0; i < dsize; i++)
                 {
-                    file.read((char *)(buf_double+i), sizeof(d_arr));
+                    file.read((char *)(buf_double + i), sizeof(d_arr));
                 }
                 file.close();
                 break;
             }
         case '3':
-            if(!buf_double)
-                {
-                    cout<<"\nНа данный момент в памяти еще нет никаких данных\n";
-                    break;
-                }
-            for(int i=0; i<dsize; i++)
-                assembly_stream(i+1, buf_double[i], numberstr, elementstr);
-            cout<<numberstr.str()<<'\n'<<elementstr.str()<<'\n'<<'\n';
-            break;
-        case '4':
-            if(!buf_double)
+            if (!buf_double)
             {
-                cout<<"\nНа данный момент в памяти еще нет никаких данных\n";
+                cout << "\nНа данный момент в памяти еще нет никаких данных\n";
                 break;
             }
-            for(int i=0; i<dsize; i++)
+            for (int i = 0; i < dsize; i++)
+                assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
+            cout << numberstr.str() << '\n'
+                 << elementstr.str() << '\n'
+                 << '\n';
+            break;
+        case '4':
+            if (!buf_double)
             {
-                S1+=buf_double[i]/pow(i+1,2);
-                if(i>3)
-                    S2+=pow(buf_double[i],2);
+                cout << "\nНа данный момент в памяти еще нет никаких данных\n";
+                break;
             }
-            Smax = S1>S2 ? S1:S2;
-            cout<<"\nРезультат работы Smax = "<<Smax<<'\n';
+            for (int i = 0; i < dsize; i++)
+            {
+                S1 += buf_double[i] / pow(i + 1, 2);
+                if (i > 3)
+                    S2 += pow(buf_double[i], 2);
+            }
+            Smax = S1 > S2 ? S1 : S2;
+            cout << "\nРезультат работы Smax = " << Smax << '\n';
             break;
         case '5':
-            power=false;
+            power = false;
             break;
         default:
-            cout<<"Введено неверное значение!\n";
+            cout << "Введено неверное значение!\n";
         }
     }
-    if(buf_double!=nullptr)
+    if (buf_double != nullptr)
         delete[] buf_double;
-    buf_double=nullptr;
-    return 0; 
+    buf_double = nullptr;
+    return 0;
 }

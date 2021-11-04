@@ -39,7 +39,7 @@ int main()
             cout << setw(10) << right << scientific << setprecision(2) << matr[i][j] << " |";
         }
         cout << endl
-             << skipstr.str() << '\n';
+             << skipstr.str() << '\n'
     }
     return 0;
 }

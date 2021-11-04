@@ -32,42 +32,44 @@ using namespace std;
 template <typename Xtype>
 size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream()<<resetiosflags(ios_base::basefield)<<setiosflags(f)<<setprecision(prec)<<a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 
 void space(int needed, ostringstream &ostr)
 {
-    ostr<<setw(needed)<<setfill(' ')<<"";
+    ostr << setw(needed) << setfill(' ') << "";
 }
 void assembly_stream(int num, const double &elem, ostringstream &number_stream, ostringstream &elem_stream)
 {
-    int differences=ElemSize(num)-ElemSize(elem);
-    if(number_stream.str().size()+abs(differences)>80)
+    int differences = ElemSize(num) - ElemSize(elem);
+    if (number_stream.str().size() + abs(differences) > 80)
     {
-        cout<<number_stream.str()<<'\n'<<elem_stream.str()<<'\n'<<'\n';
+        cout << number_stream.str() << '\n'
+             << elem_stream.str() << '\n'
+             << '\n';
         number_stream.str("Номера  |");
         elem_stream.str("Элемены |");
     }
-        if(differences>0)
+    if (differences > 0)
     {
-        number_stream<<' '<<num<<" |";
-        space(1+differences/2+differences%2, elem_stream);
-        elem_stream<<elem;
-        space(1+differences/2, elem_stream);
-        elem_stream<<'|';
+        number_stream << ' ' << num << " |";
+        space(1 + differences / 2 + differences % 2, elem_stream);
+        elem_stream << elem;
+        space(1 + differences / 2, elem_stream);
+        elem_stream << '|';
     }
-    else if(differences==0)
+    else if (differences == 0)
     {
-        number_stream<<' '<<num<<" |";
-        elem_stream<<' '<<elem<<" |";
+        number_stream << ' ' << num << " |";
+        elem_stream << ' ' << elem << " |";
     }
     else
     {
-        space(1+abs(differences)/2+abs(differences)%2, number_stream);
-        number_stream<<num;
-        space(1+abs(differences)/2, number_stream);
-        number_stream<<'|';
-        elem_stream<<' '<<elem<<" |";
+        space(1 + abs(differences) / 2 + abs(differences) % 2, number_stream);
+        number_stream << num;
+        space(1 + abs(differences) / 2, number_stream);
+        number_stream << '|';
+        elem_stream << ' ' << elem << " |";
     }
 }
 
@@ -127,7 +129,7 @@ char hotkey_to_char(int echo)
 int main()
 {
     bool power = true;
-    double* buf_double = nullptr;
+    double *buf_double = nullptr;
     int dsize = 0;
 #ifdef withsave
     int ndsize = 0;
@@ -137,32 +139,31 @@ int main()
     {
         char mode;
         cout << "\n1) Создать исходные данные\n"
-            << "2) Считать данные\n"
-            << "3) Вывести исходные данные на экран\n"
-            << "4) Обработать данные по алгоритму функции\n"
-            << "5) Завершиен работы\n"
+             << "2) Считать данные\n"
+             << "3) Вывести исходные данные на экран\n"
+             << "4) Обработать данные по алгоритму функции\n"
+             << "5) Завершиен работы\n"
 #ifdef critical
-            << "6) Критический режим считывания (при появлении ошибки программа игнорирует неверное значение)\n"
+             << "6) Критический режим считывания (при появлении ошибки программа игнорирует неверное значение)\n"
 #endif
-            << "Выберите режим работы: ";
+             << "Выберите режим работы: ";
         mode = hotkey_to_char(true);
         cout << '\n';
         int pos = 0;
         double dtemp = 0, S1 = 0, S2 = 0, Smax = 0;
         ostringstream numberstr("Номера  |", ostringstream::ate), elementstr("Элемены |", ostringstream::ate);
-#ifdef critical 
-            errlog(ostringstream::ate),
+#ifdef critical
+        errlog(ostringstream::ate),
 #endif
-            
 
 #ifdef SSTREAM
-        string str;
+            string str;
         istringstream sstr;
 #endif
         string tempstr, FileAdress;
         fstream file;
         char check;
-        char errtype{ 0 };
+        char errtype{0};
         switch (mode)
         {
         case '1':
@@ -190,7 +191,7 @@ int main()
                     }
                 }
                 cout << "+++ dsize=" << dsize;
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     cout << "\nОшибка выделения оперативной памяти\n";
@@ -243,8 +244,8 @@ int main()
                         while (true)
                         {
                             cout << "\nФайл с таким названием уже существует, вы хотите\n"
-                                << "1)Перезаписать файл\n"
-                                << "2)Вернуться назад\n";
+                                 << "1)Перезаписать файл\n"
+                                 << "2)Вернуться назад\n";
                             choice = hotkey_to_char(false);
                             if (choice == '1' || choice == '2')
                             {
@@ -259,7 +260,7 @@ int main()
                     if (file_write)
                     {
                         file.open(FileAdress, ios_base::out | ios_base::trunc | ios_base::binary);
-                        file.write((char*)buf_double, sizeof(d_arr));
+                        file.write((char *)buf_double, sizeof(d_arr));
                         file.close();
                         break;
                     }
@@ -294,8 +295,7 @@ int main()
                         sstr >> dtemp;
                     if (sstr.rdstate() != ios::eofbit)
 #else
-                    if (!(file >> dtemp) || ((check = file.peek()) != ' ' && check != '\n'
-                        && check != '\t' && check != EOF))
+                    if (!(file >> dtemp) || ((check = file.peek()) != ' ' && check != '\n' && check != '\t' && check != EOF))
 #endif
                     {
                         errtype = 'f';
@@ -309,7 +309,7 @@ int main()
                     dsize = file.tellg();
                 if (dsize % sizeof(d_arr))
                     file.close();
-#endif          
+#endif
                 if (errtype == 'f')
                 {
                     file.clear();
@@ -317,8 +317,8 @@ int main()
                     file >> tempstr;
                     file.close();
                     cout << "\nНайдена ошибка в элементе номер " << dsize
-                        << "\nАбсолютная позиция в файле " << pos
-                        << "\nНеверное значение: " << tempstr << '\n';
+                         << "\nАбсолютная позиция в файле " << pos
+                         << "\nНеверное значение: " << tempstr << '\n';
                     break;
                 }
                 if (!dsize)
@@ -327,7 +327,7 @@ int main()
                     cout << "В файле не оказалось значений, которые можно считать\n";
                     continue;
                 }
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     file.close();
@@ -337,7 +337,7 @@ int main()
                 file.seekg(0);
                 for (int i = 0; i < dsize; i++)
                 {
-                    file.read((char*)(buf_double + i), sizeof(d_arr));
+                    file.read((char *)(buf_double + i), sizeof(d_arr));
                 }
                 file.close();
                 break;
@@ -350,7 +350,9 @@ int main()
             }
             for (int i = 0; i < dsize; i++)
                 assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
-            cout << numberstr.str() << '\n' << elementstr.str() << '\n' << '\n';
+            cout << numberstr.str() << '\n'
+                 << elementstr.str() << '\n'
+                 << '\n';
             break;
         case '4':
             if (!buf_double)

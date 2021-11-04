@@ -24,19 +24,21 @@ using namespace std;
 template <typename Xtype>
 size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 
-void space(int needed, ostringstream& ostr)
+void space(int needed, ostringstream &ostr)
 {
     ostr << setw(needed) << setfill(' ') << "";
 }
-void assembly_stream(int num, const double& elem, ostringstream& number_stream, ostringstream& elem_stream)
+void assembly_stream(int num, const double &elem, ostringstream &number_stream, ostringstream &elem_stream)
 {
     int differences = ElemSize(num) - ElemSize(elem);
     if (number_stream.str().size() + abs(differences) > 80)
     {
-        cout << number_stream.str() << '\n' << elem_stream.str() << '\n' << '\n';
+        cout << number_stream.str() << '\n'
+             << elem_stream.str() << '\n'
+             << '\n';
         number_stream.str("Номера  |");
         elem_stream.str("Элемены |");
     }
@@ -109,7 +111,7 @@ char hotkey_to_char(int echo)
     return ch;
 }
 
-void term_clear_screen() 
+void term_clear_screen()
 {
 #ifdef LINUX
     system("clear");
@@ -121,15 +123,15 @@ void term_clear_screen()
 int main()
 {
     bool power = true;
-    d_arr* buf_double = nullptr;
+    d_arr *buf_double = nullptr;
     int dsize;
     char mode = '0';
     string tempstr, FileAdress;
     setlocale(LC_ALL, "ru");
     while (power)
     {
-        
-        if(tempstr=="*" || FileAdress =="*")
+
+        if (tempstr == "*" || FileAdress == "*")
         {
             tempstr.clear();
             FileAdress.clear();
@@ -139,12 +141,12 @@ int main()
             mode = '3';
         else
         {
-            cout<< "1) Создать исходные данные\n"
-                << "2) Считать данные\n"
-                << "3) Вывести исходные данные на экран\n"
-                << "4) Обработать данные по алгоритму функции\n"
-                << "5) Завершиен работы\n"
-                << "Выберите режим работы: " << endl;
+            cout << "1) Создать исходные данные\n"
+                 << "2) Считать данные\n"
+                 << "3) Вывести исходные данные на экран\n"
+                 << "4) Обработать данные по алгоритму функции\n"
+                 << "5) Завершиен работы\n"
+                 << "Выберите режим работы: " << endl;
             mode = hotkey_to_char(false);
         }
         cout << '\n';
@@ -161,9 +163,9 @@ int main()
                 cout << "Введите количество элементнов, которое вы хотите добавить(чтобы вернуться в главное меню *): ";
                 if (!(cin >> dsize) || (cin.peek() != '\n') || (dsize <= 0))
                 {
-                    bool fbit=false;
-                    if(cin.fail())
-                        fbit=true;
+                    bool fbit = false;
+                    if (cin.fail())
+                        fbit = true;
                     cin.clear();
                     getline(cin, tempstr);
                     if (fbit && tempstr == "*")
@@ -181,7 +183,7 @@ int main()
                     buf_double = nullptr;
                 }
 
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     cout << "\nОшибка выделения оперативной памяти\n";
@@ -194,9 +196,9 @@ int main()
                     cout << "\tЭлемент " << (i + 1) << " = ";
                     if (!(cin >> buf_double[i]) || (cin.peek() != '\n'))
                     {
-                        bool fbit=false;
-                        if(cin.fail())
-                            fbit=true;
+                        bool fbit = false;
+                        if (cin.fail())
+                            fbit = true;
                         cin.clear();
                         getline(cin, tempstr);
                         if (fbit && tempstr == "*")
@@ -230,10 +232,10 @@ int main()
                         char choice;
                         while (true)
                         {
-                            cout << "\nФайл с именем "<<FileAdress<<" уже существует, вы хотите:\n"
-                                << "1)Перезаписать файл\n"
-                                << "2)Указать новое имя файла\n"
-                                << "3)Не сохранять" << endl;
+                            cout << "\nФайл с именем " << FileAdress << " уже существует, вы хотите:\n"
+                                 << "1)Перезаписать файл\n"
+                                 << "2)Указать новое имя файла\n"
+                                 << "3)Не сохранять" << endl;
                             choice = hotkey_to_char(false);
                             if (choice == '1' || choice == '2' || choice == '3')
                                 break;
@@ -246,12 +248,12 @@ int main()
                     }
 
                     file.open(FileAdress, ios_base::out | ios_base::binary);
-                    if(!file.is_open())
+                    if (!file.is_open())
                     {
-                        cout<<"\nНе удалось открыть"<<FileAdress<<"для записи\n";
+                        cout << "\nНе удалось открыть" << FileAdress << "для записи\n";
                     }
-                    file.write((char*) buf_double, sizeof(d_arr)*dsize);        //for (int i = 0; i < dsize; i++)
-                    file.close();                                               //file.write((char*)(buf_double + i), sizeof(d_arr));
+                    file.write((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                    file.close();                                          //file.write((char*)(buf_double + i), sizeof(d_arr));
                     break;
                 }
                 break;
@@ -288,7 +290,7 @@ int main()
                     continue;
                 }
 
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     file.close();
@@ -296,8 +298,8 @@ int main()
                     continue;
                 }
                 file.seekg(0);
-                file.read((char*) buf_double, sizeof(d_arr)*dsize);             //for (int i = 0; i < dsize; i++)
-                file.close();                                                   //file.read((char*)(buf_double + i), sizeof(d_arr));
+                file.read((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                file.close();                                         //file.read((char*)(buf_double + i), sizeof(d_arr));
                 break;
             }
             break;
@@ -309,7 +311,9 @@ int main()
             }
             for (int i = 0; i < dsize; i++)
                 assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
-            cout << numberstr.str() << '\n' << elementstr.str() << '\n' << '\n';
+            cout << numberstr.str() << '\n'
+                 << elementstr.str() << '\n'
+                 << '\n';
             break;
         case '4':
             if (!buf_double)
@@ -324,7 +328,8 @@ int main()
                     S2 += pow(buf_double[i], 2);
             }
             Smax = S1 > S2 ? S1 : S2;
-            cout << "\nРезультат работы Smax = " << Smax << '\n' << '\n';
+            cout << "\nРезультат работы Smax = " << Smax << '\n'
+                 << '\n';
             break;
         case '5':
             power = false;

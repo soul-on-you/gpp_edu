@@ -27,14 +27,13 @@ using namespace std;
 template <typename Xtype>
 size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 char correct_input(TreaD &input_stream)
 {
     d_arr dtmp;
     int pos = input_stream.tellg();
-    if (!(input_stream >> dtmp) || (input_stream.peek() != ' ' && input_stream.peek() != '\n'
-        && input_stream.peek() != '\t' && input_stream.peek() != EOF))
+    if (!(input_stream >> dtmp) || (input_stream.peek() != ' ' && input_stream.peek() != '\n' && input_stream.peek() != '\t' && input_stream.peek() != EOF))
     {
         input_stream.seekg(pos);
         return 'f';
@@ -62,7 +61,7 @@ ifstream open_ifstream(string getname())
         return file;
     }
 }
-void failbit_err(ifstream& file, const int pos, const int dsize_s, const int dsize_c)
+void failbit_err(ifstream &file, const int pos, const int dsize_s, const int dsize_c)
 {
     string tmp;
     file.clear();
@@ -70,21 +69,21 @@ void failbit_err(ifstream& file, const int pos, const int dsize_s, const int dsi
     file >> tmp;
     //file.close();
     cout << "Найдена ошибка в элементе номер " << (dsize_c + 1) << " на строке " << (dsize_s + 1)
-        << "\nАбсолютная позиция в файле " << pos
-        << "\nНеверное значение: \"" << tmp << '\"' << '\n'
-        << "\nФайл содержит некорректные значения\n";
+         << "\nАбсолютная позиция в файле " << pos
+         << "\nНеверное значение: \"" << tmp << '\"' << '\n'
+         << "\nФайл содержит некорректные значения\n";
 }
-void empty_file_err(ifstream& file)
+void empty_file_err(ifstream &file)
 {
     file.close();
     cout << "\nВ файле не оказалось значений, которые можно считать\n";
 }
-void strings_no_equality_err(ifstream& file, const int dsize_s)
+void strings_no_equality_err(ifstream &file, const int dsize_s)
 {
     //file.close();
     cout << "\nНе правильный формат, количество элементов строки " << dsize_s << " не совпадает со стокой " << (dsize_s - 1) << '\n';
 }
-void not_square_matr_err(ifstream& file)
+void not_square_matr_err(ifstream &file)
 {
     //file.close();
     cout << "\nНе правильный формат, матрица не кваратная\n";
@@ -118,7 +117,7 @@ void not_square_matr_err(const char& err, ifstream& file, const int pos, const i
     cout << "\nНе правильный формат, матрица не кваратная\n";
 }
 */
-bool ErrCheck(const char& err, ifstream& file, const int pos, const int dsize_s, const int dsize_c)
+bool ErrCheck(const char &err, ifstream &file, const int pos, const int dsize_s, const int dsize_c)
 {
     if (err == 'f')
     {
@@ -128,8 +127,8 @@ bool ErrCheck(const char& err, ifstream& file, const int pos, const int dsize_s,
         file >> tmp;
         file.close();
         cout << "Найдена ошибка в элементе номер " << (dsize_c + 1) << " на строке " << (dsize_s + 1)
-            << "\nАбсолютная позиция в файле " << pos
-            << "\nНеверное значение: \"" << tmp << '\"' << '\n';
+             << "\nАбсолютная позиция в файле " << pos
+             << "\nНеверное значение: \"" << tmp << '\"' << '\n';
         cout << "\nФайл содержит некорректные значения\n";
     }
     else if (err == 'e')
@@ -152,7 +151,7 @@ bool ErrCheck(const char& err, ifstream& file, const int pos, const int dsize_s,
     return true;
 }
 template <typename func, typename arg>
-void GetMatr(func input(arg), char& err, int& dsize_s, int& dsize_c, int& dsize_all_sim, TreaD& input_stream)
+void GetMatr(func input(arg), char &err, int &dsize_s, int &dsize_c, int &dsize_all_sim, TreaD &input_stream)
 {
 
     while (!(Stream >> ws).eof() && !err)
@@ -166,9 +165,11 @@ void GetMatr(func input(arg), char& err, int& dsize_s, int& dsize_c, int& dsize_
             tmp = file.get();
             switch (tmp)
             {
-            case '\t':case ' ':
+            case '\t':
+            case ' ':
                 break;
-            case EOF: case '\n':
+            case EOF:
+            case '\n':
                 if (dsize_c)
                 {
                     dsize_s++;
@@ -186,7 +187,7 @@ void GetMatr(func input(arg), char& err, int& dsize_s, int& dsize_c, int& dsize_
         }
     }
 }
-void MatrCout(d_arr** buf_d_arr, const int& bufstr, const int& bufcolomn)
+void MatrCout(d_arr **buf_d_arr, const int &bufstr, const int &bufcolomn)
 {
     ostringstream numberstr("|   |", ostringstream::ate);
     ostringstream skipstr("+---+", ostringstream::ate);
@@ -195,7 +196,10 @@ void MatrCout(d_arr** buf_d_arr, const int& bufstr, const int& bufcolomn)
         skipstr << setw(12) << setfill('-') << '+';
         numberstr << setw(6 - ElemSize(j) / 2 - ElemSize(j) % 2) << "" << (j + 1) << setw(6 - ElemSize(j) / 2) << '|';
     }
-    cout << '\n' << skipstr.str() << '\n' << numberstr.str() << '\n' << skipstr.str() << '\n';
+    cout << '\n'
+         << skipstr.str() << '\n'
+         << numberstr.str() << '\n'
+         << skipstr.str() << '\n';
     for (int i = 0; i < bufstr; i++)
     {
         cout << "| " << (i + 1) << " |";
@@ -203,10 +207,11 @@ void MatrCout(d_arr** buf_d_arr, const int& bufstr, const int& bufcolomn)
         {
             cout << setw(10) << right << scientific << setprecision(2) << *(*(buf_d_arr + i) + j) << " |";
         }
-        cout << endl << skipstr.str() << '\n';
+        cout << endl
+             << skipstr.str() << '\n';
     }
 }
-void FReadMatr(ifstream& file, d_arr** buf_a_arr, const int& bufstr, const int& bufcolomn)
+void FReadMatr(ifstream &file, d_arr **buf_a_arr, const int &bufstr, const int &bufcolomn)
 {
     int pos = file.tellg();
     file.seekg(0, ios::beg);
@@ -223,21 +228,19 @@ int main()
     {
         struct matrdata
         {
-            d_arr** p_buf_double = nullptr;
+            d_arr **p_buf_double = nullptr;
             TreaD file;
             int dsize_s = 0, dsize_c = 0, dsize_all = 0;
-            char err{ 0 };
+            char err{0};
         } mdata;
         int pos = 0;
         mdata.file = (open_ifstream(&GetFileName));
         GetMatr(&correct_input, mdata.err, mdata.dsize_s, mdata.dsize_c, mdata.dsize_all, mdata.file);
-        if (ErrCheck(mdata.err,mdata.file, pos, mdata.dsize_s, mdata.dsize_c))
+        if (ErrCheck(mdata.err, mdata.file, pos, mdata.dsize_s, mdata.dsize_c))
             continue;
     }
     return 0;
 }
-
-
 
 /*
 d_arr** p_buf_double=nullptr;

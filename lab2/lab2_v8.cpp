@@ -28,19 +28,21 @@ using namespace std;
 template <typename Xtype>
 size_t ElemSize(Xtype a, ios::fmtflags f = ios_base::dec, int prec = 6)
 {
-    return ((ostringstream&)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
+    return ((ostringstream &)(ostringstream() << resetiosflags(ios_base::basefield) << setiosflags(f) << setprecision(prec) << a)).str().size();
 }
 
-void space(int needed, ostringstream& ostr)
+void space(int needed, ostringstream &ostr)
 {
     ostr << setw(needed) << setfill(' ') << "";
 }
-void assembly_stream(int num, const double& elem, ostringstream& number_stream, ostringstream& elem_stream)
+void assembly_stream(int num, const double &elem, ostringstream &number_stream, ostringstream &elem_stream)
 {
     int differences = ElemSize(num) - ElemSize(elem);
     if (number_stream.str().size() + abs(differences) > 80)
     {
-        cout << number_stream.str() << '\n' << elem_stream.str() << '\n' << '\n';
+        cout << number_stream.str() << '\n'
+             << elem_stream.str() << '\n'
+             << '\n';
         number_stream.str("Номера  |");
         elem_stream.str("Элемены |");
     }
@@ -124,8 +126,8 @@ void term_clear_screen()
 
 int main()
 {
-    bool power = true, clearterm=false;
-    d_arr* buf_double = nullptr;
+    bool power = true, clearterm = false;
+    d_arr *buf_double = nullptr;
     int dsize;
     char mode = '0';
     string FileAdress;
@@ -144,11 +146,11 @@ int main()
         else
         {
             cout << "1) Создать исходные данные\n"
-                << "2) Считать данные\n"
-                << "3) Вывести исходные данные на экран\n"
-                << "4) Обработать данные по алгоритму функции\n"
-                << "5) Завершиен работы\n"
-                << "Выберите режим работы: " << endl;
+                 << "2) Считать данные\n"
+                 << "3) Вывести исходные данные на экран\n"
+                 << "4) Обработать данные по алгоритму функции\n"
+                 << "5) Завершиен работы\n"
+                 << "Выберите режим работы: " << endl;
             mode = hotkey_to_char(false);
         }
         cout << '\n';
@@ -169,7 +171,7 @@ int main()
                 cin.ignore(cin.rdbuf()->in_avail(), '\n');
                 if (cin.peek() == '*' && cin.rdbuf()->in_avail() == 2)
                 {
-                    clearterm=true;
+                    clearterm = true;
                     break;
                 }
 #ifdef LINUX
@@ -188,7 +190,7 @@ int main()
                     buf_double = nullptr;
                 }
 
-                buf_double = new(nothrow) d_arr[dsize];
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     cout << "\nОшибка выделения оперативной памяти\n";
@@ -205,13 +207,13 @@ int main()
 #endif
                     cin.ignore(cin.rdbuf()->in_avail(), '\n');
                     if (cin.peek() == '*' && cin.rdbuf()->in_avail() == 2)
-                    {                                                       //cout << "\ncin peek = " << cin.peek() << " elem in cin " << cin.rdbuf()->in_avail() << '\n';
-                        clearterm=true;
+                    { //cout << "\ncin peek = " << cin.peek() << " elem in cin " << cin.rdbuf()->in_avail() << '\n';
+                        clearterm = true;
                         break;
                     }
 #ifdef LINUX
                     std::cin.sync_with_stdio(true);
-#endif              
+#endif
                     cin >> buf_double[i];
                     if (cin.peek() != '\n')
                     {
@@ -242,9 +244,9 @@ int main()
                         while (true)
                         {
                             cout << "\nФайл с именем \"" << FileAdress << "\" уже существует, вы хотите:\n"
-                                << "1)Перезаписать файл\n"
-                                << "2)Указать новое имя файла\n"
-                                << "3)Продолжить без сохранения" << endl;
+                                 << "1)Перезаписать файл\n"
+                                 << "2)Указать новое имя файла\n"
+                                 << "3)Продолжить без сохранения" << endl;
                             choice = hotkey_to_char(false);
                             if (choice == '1' || choice == '2' || choice == '3')
                                 break;
@@ -261,8 +263,8 @@ int main()
                     {
                         perror(("\nОшибка открытия файла с именем \"" + FileAdress + "\"").c_str());
                     }
-                    file.write((char*)buf_double, sizeof(d_arr) * dsize);       //for (int i = 0; i < dsize; i++)
-                    file.close();                                               //file.write((char*)(buf_double + i), sizeof(d_arr));
+                    file.write((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                    file.close();                                          //file.write((char*)(buf_double + i), sizeof(d_arr));
                     break;
                 }
                 break;
@@ -301,12 +303,13 @@ int main()
 #else
                 file.seekg(0);
                 file.ignore(INT32_MAX, EOF);
-                dsize=file.gcount()
+                dsize = file.gcount()
 #endif
-#else           
+#else
                 file.ignore()
-                dsize=experimental::filesystem::file_size(FileAdress);
-                cout << '\n' << dsize << '\n';
+                    dsize = experimental::filesystem::file_size(FileAdress);
+                cout << '\n'
+                     << dsize << '\n';
 #endif
                 if (dsize % sizeof(d_arr))
                 {
@@ -322,21 +325,21 @@ int main()
                     cout << "\nВ файле не оказалось значений, которые можно считать\n";
                     continue;
                 }
-                if (buf_double)             // этот вариант подходит, если пользователь думал, что в файле есть данные
-                {                           // и хорошо бы их получить, но раз файл пустой или нарушена целостность,
-                    delete[] buf_double;    // можно оставить массив в памяти, например, в нем хранились бы номера файлов 
-                    buf_double = nullptr;   // или еще какая-либо, информация к которой после отработки 
-                }                           // загруженного файла, все равно бы пришлось обратиться
-                buf_double = new(nothrow) d_arr[dsize];
+                if (buf_double)           // этот вариант подходит, если пользователь думал, что в файле есть данные
+                {                         // и хорошо бы их получить, но раз файл пустой или нарушена целостность,
+                    delete[] buf_double;  // можно оставить массив в памяти, например, в нем хранились бы номера файлов
+                    buf_double = nullptr; // или еще какая-либо, информация к которой после отработки
+                }                         // загруженного файла, все равно бы пришлось обратиться
+                buf_double = new (nothrow) d_arr[dsize];
                 if (buf_double == nullptr)
                 {
                     file.close();
                     cout << "\nОшибка выделения оперативной памяти\n";
                     continue;
                 }
-                file.seekg(0);                                                  //file.clear();
-                file.read((char*)buf_double, sizeof(d_arr) * dsize);            //for (int i = 0; i < dsize; i++)
-                file.close();                                                   //file.read((char*)(buf_double + i), sizeof(d_arr));
+                file.seekg(0);                                        //file.clear();
+                file.read((char *)buf_double, sizeof(d_arr) * dsize); //for (int i = 0; i < dsize; i++)
+                file.close();                                         //file.read((char*)(buf_double + i), sizeof(d_arr));
                 break;
             }
             break;
@@ -348,7 +351,9 @@ int main()
             }
             for (int i = 0; i < dsize; i++)
                 assembly_stream(i + 1, buf_double[i], numberstr, elementstr);
-            cout << numberstr.str() << '\n' << elementstr.str() << '\n' << '\n';
+            cout << numberstr.str() << '\n'
+                 << elementstr.str() << '\n'
+                 << '\n';
             break;
         case '4':
             if (!buf_double)
@@ -363,7 +368,8 @@ int main()
                     S2 += pow(buf_double[i], 2);
             }
             Smax = S1 > S2 ? S1 : S2;
-            cout << "\nРезультат работы Smax = " << Smax << '\n' << '\n';
+            cout << "\nРезультат работы Smax = " << Smax << '\n'
+                 << '\n';
             break;
         case '5':
             power = false;

@@ -4,14 +4,16 @@
 #include <fstream>
 #include <experimental/filesystem>
 
-using std::cout; using std::cin;
-using std::endl; using std::ifstream;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::ifstream;
 
-int main() {
+int main()
+{
     std::string path = "bin1";
 
-    cout << "size of file '" << path << "' = " <<
-        std::experimental::filesystem::file_size(path) << std::endl;
+    cout << "size of file '" << path << "' = " << std::experimental::filesystem::file_size(path) << std::endl;
 
     return EXIT_SUCCESS;
 }

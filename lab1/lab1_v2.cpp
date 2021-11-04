@@ -4,9 +4,9 @@
 #include <iomanip>
 #include <cstdio>
 #include <cmath>
- 
+
 using namespace std;
- 
+
 int intsize(int a)
 {
     int r;
@@ -48,8 +48,7 @@ string space(int a)
     }
     return sp;
 }
- 
- 
+
 int main()
 {
     cout << setw(120) << setfill('=') << '\n';
@@ -59,7 +58,7 @@ int main()
     int confirm = 0;
     while (confirm == 0)
     {
-        char Conf{ 0 };
+        char Conf{0};
         const char spce(32);
         int correrctCH = 0;
         getline(cin, adr);
@@ -83,7 +82,7 @@ int main()
                 }
                 else
                 {
-                cout << "Use correct value!!!\t";
+                    cout << "Use correct value!!!\t";
                 }
             }
         }
@@ -110,21 +109,21 @@ int main()
                 file.close();
                 file.open(adr, fstream::in);
                 confirm = 1;
-            }   
+            }
         }
         else
         {
-        cout << "Use correct value!!!\t";
+            cout << "Use correct value!!!\t";
         }
     }
     cout << "\033[2J\033[H";
- 
+
     int S1 = 0, S2 = 0, Smax = 0;
-    int i = 0, n = 0, id = 0, chck=0;
+    int i = 0, n = 0, id = 0, chck = 0;
     int t = 0, err = 0, errOP = 0, backid = 0;
     int pstn = 0, r = 0, delta = 0;
-    char check1{ 0 }, check2{ 0 };
-    string str, fstr{ "Elements: " };
+    char check1{0}, check2{0};
+    string str, fstr{"Elements: "};
     cout << "Numbers:  ";
     //ifstream copyF;
     //copyF.open(adr);
@@ -146,7 +145,7 @@ int main()
                 //char sim(t);
                 //cout << "i=" << i << "\t" << "t=" << t << "\t" << "id=" << file.tellg() << "\t" << "char:" << sim << "\t";
                 pstn = file.tellg();
-                outf.seekp(pstn+(err*estr.size())+(eOP.size()*errOP)-1);
+                outf.seekp(pstn + (err * estr.size()) + (eOP.size() * errOP) - 1);
                 if (chck == 0)
                 {
                     outf << eOP << sim;
@@ -162,9 +161,9 @@ int main()
         else
         {
             id = file.tellg();
-            r = intsize(t)+1;
+            r = intsize(t) + 1;
             outf.seekp(id - r + 1 + (err * estr.size()) + (errOP * eOP.size()));
-            check1 = file.peek(); 
+            check1 = file.peek();
             file.seekg(id - r);
             check2 = file.peek();
             //cout << "i=" << i << "\t" << "t=" << t << "\t" << "id=" << id << "\t" << "r=" << r << "\t" << "outID=" << (id - r + 1) << "\t";
@@ -178,14 +177,14 @@ int main()
                     delta = r - intsize(n);
                     if ((delta % 2) == 0)
                     {
-                        
+
                         //cout << " |" << setw((delta / 2)+1) << n << setw(delta / 2) << "|";
                         cout << " |" << space(((delta / 2) - 1)) << n << space((delta / 2)) << "|";
                     }
                     else
                     {
                         //cout << " |" << setw((delta / 2)+1) << n << setw((delta / 2) + 1) << "|";
-                        cout << " |" << space((delta/2)) << n << space((delta / 2)) << "|";
+                        cout << " |" << space((delta / 2)) << n << space((delta / 2)) << "|";
                     }
                     fstr += " |" + to_string(t) + "|";
                 }
@@ -231,7 +230,8 @@ int main()
             //cout << "\n";
         }
     }
-    cout << "\n" << fstr;
+    cout << "\n"
+         << fstr;
     if (S1 > S2)
     {
         Smax = S1;
