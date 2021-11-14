@@ -29,17 +29,20 @@ void __fastcall TForm1::N9Click(TObject *Sender)
     if (DFileOpen->Execute())
     {
         FileName = DFileOpen->FileName;
-        StatusCode = LoadMatrix(FileName, StudentData, &AdditionErrorInformation.MemAllocStep);
+        StatusCode = LoadMatrix(FileName, StudentData, Table, &AdditionErrorInformation.MemAllocStep);
         if (StatusCode == EGood)
         {
-            Table->ColCount = StudentData.Subjects.Length + 2;
-            Table->RowCount = StudentData.Students.Length + 1;
-            for (int i = 0; i < StudentData.Subjects.Length; i++)
-                Table->Cells[i + 2][0] = AnsiString(StudentData.Subjects[i]).c_str();
-            for (int i = 0; i < StudentData.Students.Length; i++)
-                Table->Cells[1][i + 1] = AnsiString(StudentData.Students[i]).c_str();
-            //			StatusBar->SimpleText= AnsiString(StudentData.Subjects[0]).c_str();
-            //			StatusBar->SimpleText= StudentData.Students[0];
+            //			Table->ColCount = StudentData.Subjects.Length + 2;
+            //			Table->RowCount = StudentData.Students.Length + 1;
+            //			for(int i=0; i<StudentData.Subjects.Length; i++)
+            //				Table->Cells[i+2][0] = AnsiString(StudentData.Subjects[i]).c_str();
+            //			for(int i=0; i<StudentData.Students.Length; i++)
+            //				Table->Cells[1][i+1] = AnsiString(StudentData.Students[i]).c_str();
+            ////			StatusBar->SimpleText= AnsiString(StudentData.Subjects[0]).c_str();
+            ////			StatusBar->SimpleText= StudentData.Students[0];
+            //			for(int i=0; i< StudentData.Students.Length;i++)
+            //				for(int j =0; j< StudentData.Subjects.Length; j++)
+            //					Table->Cells[2+j][i+1]= StrToInt(StudentData.marks[i][j]);
         }
     }
     else
@@ -124,7 +127,7 @@ void __fastcall TForm1::N12Click(TObject *Sender)
         S += Table->Cells[1][1];
         S += StrToInt(StudentData.Students.Length);
         //		StatusBar->SimpleText = S;
-        SaveMatrix(FileName, StudentData, &AdditionErrorInformation.MemAllocStep);
+        SaveMatrix(FileName, StudentData, Table, &AdditionErrorInformation.MemAllocStep);
     }
 }
 //---------------------------------------------------------------------------

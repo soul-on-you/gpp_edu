@@ -1,7 +1,8 @@
 #ifndef _BACKEND_H
 #define _BACKEND_H
 
-#include <System.hpp>
+#include <System.Classes.hpp>
+#include <Vcl.Grids.hpp>
 #include "wrapper_functions.h"
 typedef DynamicArray<DynamicArray<__matrix_elem_t>> __dmatrix_t;
 
@@ -30,6 +31,6 @@ struct TStudentsData
 	DynamicArray<String> Students;
 };
 
-TStatusCode LoadMatrix(const String &FileName, TStudentsData &data, int *EMemAllocStep = nullptr);
-TStatusCode SaveMatrix(const String &FileName, TStudentsData &data, int *EMemAllocStep = nullptr);
+TStatusCode LoadMatrix(const String &FileName, TStudentsData &data, TStringGrid *Table, int *EMemAllocStep = nullptr);
+TStatusCode SaveMatrix(const String &FileName, TStudentsData &data, TStringGrid *Table, int *EMemAllocStep = nullptr);
 #endif
