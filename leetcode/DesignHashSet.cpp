@@ -1,35 +1,35 @@
 #include <iostream>
 #include <cstring>
-class MyHashSet
-{
-public:
-    MyHashSet()
-    {
-        keysMap = new (std::nothrow) int *[10];
-        size = 10;
-        for (int i = 0; i < 10; i++)
-            *keysMap = new (std::nothrow) int[64];
-    }
+// class MyHashSet
+// {
+// public:
+//     MyHashSet()
+//     {
+//         keysMap = new (std::nothrow) int *[10];
+//         size = 10;
+//         for (int i = 0; i < 10; i++)
+//             *keysMap = new (std::nothrow) int[64];
+//     }
 
-    void add(int key)
-    {
-        // for (int i = 1; i < size; i++)
-        //     if (key <)
-    }
+//     void add(int key)
+//     {
+//         // for (int i = 1; i < size; i++)
+//         //     if (key <)
+//     }
 
-    void remove(int key)
-    {
-    }
+//     void remove(int key)
+//     {
+//     }
 
-    bool contains(int key)
-    {
-        return false;
-    }
+//     bool contains(int key)
+//     {
+//         return false;
+//     }
 
-private:
-    int **keysMap;
-    int size;
-};
+// private:
+//     int **keysMap;
+//     int size;
+// };
 
 class MyHashSetUsingMemset
 {
@@ -68,11 +68,3 @@ int main()
     std::cout << hashSet.contains(2) << '\n';
     return 0;
 }
-
-/**
- * Your MyHashSet object will be instantiated and called as such:
- * MyHashSet* obj = new MyHashSet();
- * obj->add(key);
- * obj->remove(key);
- * bool param_3 = obj->contains(key);
- */
