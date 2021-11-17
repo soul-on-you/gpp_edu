@@ -53,7 +53,7 @@ int main()
 
     // // вывод из файла
     int N = 6;
-    fstream f("file", ios::in | ios::out | ios::binary);
+    fstream f("testOverwritefile", ios::in | ios::out | ios::binary);
     f.seekp(0); // перезапись работает, крутой патерн
     int t = 12, t2 = 13;
     f.write(reinterpret_cast<char *>(&t), sizeof(int));
