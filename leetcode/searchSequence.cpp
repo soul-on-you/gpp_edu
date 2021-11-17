@@ -30,33 +30,6 @@ struct findResult
 findResult findSequence(char *array)
 {
     int arrayLength = getLength(array);
-    std::cout << arrayLength << std::endl;
-    if (arrayLength > 1)
-    {
-        for (int blockSize = arrayLength / 2; blockSize != 1; blockSize--)
-        {
-            for (int startOffset = 0; (startOffset + blockSize * 2 - 1) != arrayLength; startOffset++)
-                for (int curVariability = 0, allVariants = arrayLength - blockSize * 2 - startOffset + 1; curVariability < allVariants; curVariability++)
-                {
-                    for (int validBlockSize = 0; validBlockSize != blockSize;)
-                    {
-                        if (array[validBlockSize + startOffset] != array[blockSize + validBlockSize + curVariability + startOffset])
-                        {
-                            curVariability += validBlockSize;
-                            break;
-                        }
-                        if (++validBlockSize == blockSize)
-                            return findResult(startOffset, blockSize + curVariability + startOffset, validBlockSize);
-                    }
-                }
-        }
-    }
-    return findResult();
-}
-
-findResult findSequenceV2(char *array)
-{
-    int arrayLength = getLength(array);
     if (arrayLength > 1)
     {
         for (int sequenceLength = arrayLength / 2; sequenceLength != 1; sequenceLength--)
@@ -85,10 +58,9 @@ int main()
     setlocale(LC_ALL, "ru");
     std::cout << "Введите последовательность:\n";
     int size = 800;
-    // char *arr = new char[size];
     char arr[size];
     std::cin.getline(arr, sizeof(arr));
-    findResult result = findSequenceV2(arr);
+    findResult result = findSequence(arr);
     if (result.startOffset != -1)
     {
 #ifdef __LINUX__
@@ -96,7 +68,12 @@ int main()
         strncpy(second, arr + result.startOffset, result.sequenceLength);
         second[result.sequenceLength + 1] = '\0';
 #else
-        char *second = new char[result.sequenceLength + 1];
+        char *second = new (std::nothrow) char[result.sequenceLength + 1];
+        if (!second)
+        {
+            std::cout << "Не удалось выделить память под последовательность\n";
+            return -1;
+        }
         strncpy_s(second, result.sequenceLength + 1, arr + result.startOffset, result.sequenceLength);
 #endif
         std::cout << "Найден повтор последовательности: " << second << '\n'

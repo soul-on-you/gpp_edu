@@ -3,7 +3,10 @@
 
 #include <System.Classes.hpp>
 #include <Vcl.Grids.hpp>
-#include "wrapper_functions.h"
+//#include "wrapper_functions.h"
+typedef int __matrix_elem_t;
+typedef __matrix_elem_t *__matrix_str_t;
+typedef __matrix_str_t *__matrix_t;
 typedef DynamicArray<DynamicArray<__matrix_elem_t>> __dmatrix_t;
 
 enum TStatusCode
@@ -13,24 +16,25 @@ enum TStatusCode
 	EMemAlloc,
 	EFileIntegrity,
 	EOpenFile,
-	ESaveFile
+	ESaveFile,
+	EInvalidInput
 };
 
 union TErrInfo
 {
 	int MemAllocStep;
-	int Other;
+	String *InvalidInput;
 };
 
-struct TStudentsData
-{
-	int signature;
-	int hash;
-	__dmatrix_t marks;
-	DynamicArray<String> Subjects;
-	DynamicArray<String> Students;
-};
+//struct TStudentsData
+//{
+//	int signature;
+//	int hash;
+//	__dmatrix_t marks;
+//	DynamicArray<String> Subjects;
+//	DynamicArray<String> Students;
+//};
 
-TStatusCode LoadMatrix(const String &FileName, TStudentsData &data, TStringGrid *Table, int *EMemAllocStep = nullptr);
-TStatusCode SaveMatrix(const String &FileName, TStudentsData &data, TStringGrid *Table, int *EMemAllocStep = nullptr);
+TStatusCode LoadMatrix(const String &FileName, TStringGrid *Table, int *EMemAllocStep = nullptr);
+TStatusCode SaveMatrix(const String &FileName, TStringGrid *Table, int *EMemAllocStep = nullptr);
 #endif
