@@ -4,7 +4,7 @@
 #pragma hdrstop
 
 #include <string.h>
-//#include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/crc.hpp>
 #include <boost/cstdint.hpp>
 #include <fstream>
@@ -21,20 +21,7 @@ TMainForm *MainForm;
 __fastcall TMainForm::TMainForm(TComponent *Owner)
     : TForm(Owner)
 {
-    //	StudentData.signature = 0;
-    //	StudentData.hash = 0;
-    //	Table->Cells[0][0] = L"№";
-    //	Table->Cells[1][0] = L"Студент";
-    //	Table->Cells[0][1] = L"1";
-    //	Table->Cells[0][2] = L"2";
-    //	Table->Cells[2][0] = L"Мат.Анализ";
-    //	Table->Cells[3][0] = L"Программирование";
-    //	NewStudentsTableInit(Tabs[Tabs.Length-1], Tabs[Tabs.Length-1], Table);
-    //		PageTabs.Length = 1;
-    //		PageTabs[0] =  TabSheet0;
-    //		NewStudentsTableInit(TabSheet0, TabSheet0, Table);
-    NewTabInit(Table, Pages, PageTabs); // сделать вклатку hide и брать из нее пропертис
-    //	PageTabs[1]->
+    NewTabInit(Pages, PageTabs);
 }
 //---------------------------------------------------------------------------
 
@@ -43,11 +30,24 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
     if (DFileOpen->Execute())
     {
         FileName = DFileOpen->FileName;
-        // добавить очистку имен студентов или в самой загрузке делать чтобы L=""
         StatusCode = LoadMatrix(FileName, getCurrentTable() /*Table*/, &AdditionErrorInformation.MemAllocStep);
         if (StatusCode == EGood)
         {
+            boost::filesystem::path path_to_file(FileName.c_str());
+            //            StatusBar->SimpleText = L"as is: " + String(path_to_file.parent_path().string().c_str());
+            //			StatusBar->SimpleText += L"\tnormalized: " + String(path_to_file.parent_path().normalize().string().c_str());
             Pages->ActivePage->Caption = SliceAdressToFileName(FileName);
+            int tag = getCurrentTable()->Tag;
+            int l2 = DirNames.Length;
+            DirNames[tag] = (const String &)(String(
+                (
+                    (
+                        (const boost::filesystem::path &)(boost::filesystem::path(FileName.c_str())))
+                        .parent_path()
+                        .string()
+                        .c_str())));
+            int l = DirNames[tag].Length();
+            StatusBar->SimpleText = DirNames[getCurrentTable()->Tag];
         }
         else
             ErrHandler(DFileOpen->FileName, StatusBar, StatusCode, &AdditionErrorInformation);
@@ -57,35 +57,28 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBSaveClick(TObject *Sender)
 {
-    //	if(Changed)
-    //	{
-    if ((FileName = getFileName()) != L"")
+    if ((FileName = getFileName()) != String())
     {
         if ((StatusCode = SaveMatrix(getCurrentTable() /*Table*/, &AdditionErrorInformation.MemAllocStep, &FileName)) != EGood)
             ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
     }
     else
         MenuBSaveAsClick(Sender);
-    //	}
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 {
-    //	if (DSaveDialog->Execute())
-    //	{
-    //		FileName = DSaveDialog->FileName;
     if ((StatusCode = SaveMatrix(getCurrentTable() /*Table*/, &AdditionErrorInformation.MemAllocStep)) == EGood)
     {
-        //			boost::filesystem::path path_to_file(FileName.c_str());
-        //			StatusBar->SimpleText = L"as is: " + String(path_to_file.parent_path().string().c_str());
-        //			StatusBar->SimpleText += L"\tnormalized: " + String(path_to_file.parent_path().normalize().string().c_str());
-        if (FileName != L"")
+        //		boost::filesystem::path path_to_file(FileName.c_str());
+        //		StatusBar->SimpleText = L"as is: " + String(path_to_file.parent_path().string().c_str());
+        //		StatusBar->SimpleText += L"\tnormalized: " + String(path_to_file.parent_path().normalize().string().c_str());
+        if (FileName != String())
             Pages->ActivePage->Caption = SliceAdressToFileName(FileName);
     }
     else
         ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
-    //    }
 }
 //---------------------------------------------------------------------------
 
@@ -98,43 +91,47 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 {
-    NewTabInit(Table /*getCurrentTable()*/, Pages, PageTabs);
+    NewTabInit(Pages, PageTabs);
     Pages->ActivePage = PageTabs[PageTabs.High];
-    //	PageTabs.Length = PageTabs.Length +1;
-    //	PageTabs[PageTabs.Length-1] = new TTabSheet(Pages);
-    //	PageTabs[PageTabs.Length-1]->PageControl = Pages;
-    //	PageTabs[PageTabs.Length-1]->Caption = L"New";
-    //	TStringGrid* createdTable = new TStringGrid(PageTabs[PageTabs.Length-1]);
-    //	createdTable->Parent = PageTabs[PageTabs.Length-1];
-    //	createdTable->RowCount = 3;
-    //	createdTable->ColCount = 3;
-    //	createdTable->Align = alClient;
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow, const UnicodeString Value)
 {
     TStringGrid *curTable = (TStringGrid *)Sender;
+    //	int tmp = curTable->Tag;
     if (ACol >= 2 && ACol >= 1)
     {
         TRect curRect = curTable->CellRect(ACol, ARow);
+        //		DynamicArray<TRect> curBlackList = BlackList[curTable->Tag];
         char Sym = *AnsiString(curTable->Cells[ACol][ARow]).c_str();
         if (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '1')
         {
             //			curTable->Cells[ACol][ARow].
             // смена цвета клетки на красный
             //			GridDrawCell(curTable, ACol, ARow, (TRect &)(const TRect&)curTable->CellRect(ACol, ARow), TGridDrawState());
-            BlackList.Length++;
-            BlackList[BlackList.Length - 1] = curRect;
+
+            bool notContrainsRect = true;
+            for (int i = 0; i < /*curBlackList*/ BlackList[curTable->Tag].Length && notContrainsRect;
+                 notContrainsRect = (/*curBlackList*/ BlackList[curTable->Tag][i++] == curRect) ? false : true)
+                ;
+            if (notContrainsRect)
+            {
+                /*curBlackList*/ BlackList[curTable->Tag].Length++;
+                //				int l = /*curBlackList*/BlackList[curTable->Tag].Length;  DEBUG
+                /*curBlackList*/ BlackList[curTable->Tag][/*curBlackList*/ BlackList[curTable->Tag].High] = curRect;
+            }
         }
         else // смена цвета клетки на белый
         {
-            for (int i = 0; i < BlackList.Length; i++)
+            for (int i = 0; i < /*curBlackList*/ BlackList[curTable->Tag].Length; i++)
             {
-                if (BlackList[i] == curRect)
+                if (/*curBlackList*/ BlackList[curTable->Tag][i] == curRect)
                 {
-                    BlackList[i] = BlackList[BlackList.Length - 1];
-                    BlackList.Length--;
+                    /*curBlackList*/ BlackList[curTable->Tag][i] = /*curBlackList*/ BlackList[curTable->Tag][/*curBlackList*/ BlackList[curTable->Tag].High];
+                    /*curBlackList*/ BlackList[curTable->Tag].Length--;
+                    //					int l = /*curBlackList*/BlackList[curTable->Tag].Length;  DEBUG
+                    break;
                 }
             }
         }
@@ -148,54 +145,46 @@ void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow, con
                                         TGridDrawState State)
 {
     TStringGrid *curTable = (TStringGrid *)Sender;
-    //    if( ( ARow % 2 ) == 0 )
-    //    {
-    //        if( ARow == 0 )
-    //			curTable->Canvas->Brush->Color = clBlue;
-    //        else
-    //			curTable->Canvas->Brush->Color = clGray;
-    //		curTable->Canvas->FillRect( Rect );
-    //	}
-    for (int i = 0; i < BlackList.Length; i++)
+    TRect curRect = curTable->CellRect(ACol, ARow);
+#define curBlackList (BlackList[curTable->Tag])
+    //	DynamicArray<TRect> curBlackList = BlackList[curTable->Tag];
+    int l = curBlackList.Length;
+    for (int i = 0; i < curBlackList.Length; i++)
     {
-        curTable->Canvas->Brush->Color = clRed;
-        curTable->Canvas->FillRect(BlackList[i]);
-        int TextWidth = curTable->Canvas->TextWidth(curTable->Cells[ACol][ARow]);
-        //int TextWidth=StatusBar->Canvas->TextWidth(Panel->Text);
-        //		int TextLeft=Rect.Left;
-        //		if(TextWidth<Rect.Width())//проверяем, что текст не шире панели, если шире - то выводим с самого края
-        //		  TextLeft+=(Rect.Width()-TextWidth)/2;
-        //		StatusBar->Canvas->TextRect(Rect,TextLeft,Rect.Top,Panel->Text);
-        curTable->Canvas->TextOut(BlackList[i].Left + (BlackList[i].Width() - TextWidth) / 2,
-                                  BlackList[i].Top + (BlackList[i].Height() - curTable->Canvas->TextHeight(curTable->Cells[ACol][ARow])) / 2,
-                                  curTable->Cells[ACol][ARow]);
+        if (curRect == curBlackList[i])
+        {
+            curTable->Canvas->Brush->Color = clRed;
+            curTable->Canvas->FillRect(curBlackList[i]);
+            int TextWidth = curTable->Canvas->TextWidth(curTable->Cells[ACol][ARow]);
+            curTable->Canvas->TextOut(curBlackList[i].Left + (curBlackList[i].Width() - TextWidth) / 2,
+                                      curBlackList[i].Top + (curBlackList[i].Height() - curTable->Canvas->TextHeight(curTable->Cells[ACol][ARow])) / 2,
+                                      curTable->Cells[ACol][ARow]);
+            break;
+        }
     }
 }
 
 //---------------------------------------------------------------------------
-void TMainForm::NewTabInit(const TStringGrid *sourse, TPageControl *pageSelector, DynamicArray<TTabSheet *> &Tabs, const String *config)
+void TMainForm::NewTabInit(TPageControl *pageSelector, DynamicArray<TTabSheet *> &Tabs, const String *config)
 {
     Tabs.Length = Tabs.Length + 1;
-    Tabs[Tabs.Length - 1] = new TTabSheet(pageSelector);
-    Tabs[Tabs.Length - 1]->PageControl = pageSelector;
-    Tabs[Tabs.Length - 1]->Caption = L"Безымянный";
-    NewStudentsTableInit(Tabs[Tabs.Length - 1], Tabs[Tabs.Length - 1] /*, sourse*/);
-    //	TStringGrid* createdTable = new TStringGrid(Tabs[Tabs.Length-1]);
-    //	createdTable->Parent = Tabs[Tabs.Length-1];
-    //	createdTable->RowCount = 3;
-    //	createdTable->ColCount = 3;
-    //	createdTable->Align = alClient;
+    Tabs[Tabs.High] = new TTabSheet(pageSelector);
+    Tabs[Tabs.High]->PageControl = pageSelector;
+    Tabs[Tabs.High]->Caption = L"Безымянный";
+    String Check = Tabs[Tabs.High]->Caption;
+    NewStudentsTableInit(Tabs[Tabs.High], Tabs[Tabs.High]);
+    BlackList.Length++;
+    Tabs[Tabs.High]->Controls[0]->Tag = BlackList.High;
+    DirNames.Length++;
+    //	StatusBar->SimpleText =  Tabs[Tabs.High]->Tag;
 }
 
 //---------------------------------------------------------------------------
 
 template <typename TOwner, typename TParent>
-void TMainForm::NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelector, /* const TStringGrid *sourse,*/ const String *config)
+void TMainForm::NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelector, const String *config)
 {
     TStringGrid *createdTable = new TStringGrid(ownerSelector);
-    //	*createdTable = *sourse;
-    //	createdTable->Assign(static_cast<TPersistent*>(sourse));                 //(TPersistent* )
-    //	createdTable->Options = sourse->Options;
     createdTable->Options << goRowSizing << goColSizing << goRowMoving
                           << goColMoving << goEditing << goTabs << goFixedColClick
                           << goFixedRowClick << goFixedHotTrack << goFixedColDefAlign;
@@ -204,24 +193,14 @@ void TMainForm::NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelec
     createdTable->DefaultColAlignment = taCenter;
     createdTable->RowCount = 2;
     createdTable->ColCount = 3;
-    createdTable->Cells[0][0] = L"№";
-    createdTable->Cells[0][1] = L"1";
-    createdTable->Cells[1][0] = L"Студент";
-    createdTable->Cells[1][1] = L"<ФИО>";
-    createdTable->Cells[2][0] = L"Предмет";
-    createdTable->Cells[2][1] = L"<Оценка>";
+    createdTable->Cells[0][0] = String(L"№");
+    createdTable->Cells[0][1] = String(L"1");
+    createdTable->Cells[1][0] = String(L"Студент");
+    createdTable->Cells[1][1] = String(L"<ФИО>");
+    createdTable->Cells[2][0] = String(L"Предмет");
+    createdTable->Cells[2][1] = String(L"<Оценка>");
     createdTable->OnSetEditText = GridSetEditText;
     createdTable->OnDrawCell = GridDrawCell;
-    //
-    //	if(config)
-    //	{
-    //		//загрузка настроек по дефолту
-    //	}
-    //	else
-    //	{
-    ////		createdTable->Options = [ goFixedVertLine, goFixedHorzLine, goVertLine,goHorzLine, goRangeSelect, goRowSizing, goColSizing,goRowMoving, goColMoving, goEditing, goTabs, goFixedColClick,goFixedRowClick, goFixedHotTrack, goFixedColDefAlign, goFixedRowDefAlign ];
-    ////		createdTable->DefaultColAlignment = taCenter;
-    //	}
 }
 
 void __fastcall TMainForm::SBStudentCountDownClick(TObject *Sender)
@@ -229,19 +208,16 @@ void __fastcall TMainForm::SBStudentCountDownClick(TObject *Sender)
     TStringGrid *curTable = getCurrentTable();
     if (curTable->RowCount > 2)
     {
-        EStudentCount->Text = curTable /*Table*/->RowCount - 2;
-        GridManageRow(curTable /*Table*/->RowCount - 1, curTable /*Table*/);
-        //		Table->RowCount =  Table->RowCount-1;
+        EStudentCount->Text = curTable->RowCount - 2;
+        GridManageRow(curTable->RowCount - 1, curTable);
     }
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TMainForm::SBStudentCountUpClick(TObject *Sender)
 {
-    EStudentCount->Text = getCurrentTable() /*Table*/->RowCount;
-    GridManageRow(getCurrentTable() /*Table*/->RowCount + 1, getCurrentTable() /*Table*/);
-    //		Table->RowCount =  Table->RowCount+1;
-    //		Table->Cells[0][Table->RowCount] = Table->RowCount;
+    EStudentCount->Text = getCurrentTable()->RowCount;
+    GridManageRow(getCurrentTable()->RowCount + 1, getCurrentTable());
 }
 //---------------------------------------------------------------------------
 
@@ -250,21 +226,17 @@ void __fastcall TMainForm::EStudentCountKeyDown(TObject *Sender, WORD &Key, TShi
 {
     if (Key == VK_RETURN)
     {
-        if (EStudentCount->Text != L"")
+        if (EStudentCount->Text != String())
         {
             int tmp;
             if (TryStrToInt(EStudentCount->Text, tmp) && tmp > 1)
             {
                 EStudentCount->Text = tmp;
-                //				Table->RowCount =  tmp + 1;
-                GridManageRow(tmp + 1, getCurrentTable() /*Table*/);
+                GridManageRow(tmp + 1, getCurrentTable());
                 return;
             }
             String S1 = EStudentCount->Text.c_str();
             AdditionErrorInformation.InvalidInput = &S1;
-            //			String S1 = *(&(String&)(const String &)(String() = EStudentCount->Text.c_str()));
-            //          AdditionErrorInformation.InvalidInput = &S1;
-            //			AdditionErrorInformation.InvalidInput = &(String&)(const String &)(String() = EStudentCount->Text.c_str());        //&(String&)(const String &)
             ErrHandler(FileName, StatusBar, StatusCode = EInvalidInput, &AdditionErrorInformation);
         }
         else
@@ -283,16 +255,14 @@ void GridManageRow(int rowCount, TStringGrid *gridSelector)
         rowCount -= gridSelector->RowCount;
         for (int i = rowCount - 1, rowCount = gridSelector->RowCount; i < rowCount;)
         {
-            for (int j = 1 /*gridSelector->ColCount-3*/; j < gridSelector->ColCount;)
-                gridSelector->Cells[j++][i + 1] = String(); //L"";
+            for (int j = 1; j < gridSelector->ColCount;)
+                gridSelector->Cells[j++][i + 1] = String(); //String();
             gridSelector->Cells[0][i] = IntToStr(i++);
         }
     }
     else
     {
         gridSelector->RowCount = rowCount;
-        //		String tmp = gridSelector->Cells[gridSelector->RowCount+1][0];
-        //		gridSelector->Cells[1][1] = tmp;
     }
 }
 
@@ -306,12 +276,14 @@ void GridManageCol(const String *subjects, int colCount, TStringGrid *gridSelect
         for (int i = colCount, j = 0, k = 0, colCount = gridSelector->ColCount; i < colCount; i++, k++)
         {
             gridSelector->Cells[i][j] = subjects[k];
-            for (j = 1 /*gridSelector->RowCount-3*/; j < gridSelector->RowCount; j++)
+            for (j = 1; j < gridSelector->RowCount; j++)
                 gridSelector->Cells[i][j] = String();
         }
     }
     else
     {
+        String fallsRemove;
+        bool falls = false;
         for (int i = 0, removeCount = gridSelector->ColCount - colCount; i < removeCount; i++)
             for (int j = 2, columns = gridSelector->ColCount; j < columns;)
             {
@@ -323,30 +295,52 @@ void GridManageCol(const String *subjects, int colCount, TStringGrid *gridSelect
                 }
                 if (++j == columns)
                 {
-                    ////СООБЩЕНИЕ ЧТО НЕ УДАЛОСЬ УДАЛИТЬ
+                    if (!falls)
+                    {
+                        fallsRemove += L"\"" + subjects[i] + L"\"";
+                        falls = true;
+                    }
+                    else
+                        fallsRemove += L", \"" + subjects[i] + L"\"";
                     colCount++;
                 }
             }
         gridSelector->ColCount = colCount;
-        //		String tmp = gridSelector->Cells[gridSelector->RowCount+1][0];
-        //		gridSelector->Cells[1][1] = tmp;
+        if (falls)
+            Application->MessageBox(String(L"Неудалось удалить предметы: " + fallsRemove).w_str(), L"Ошибка!", MB_OK | MB_ICONERROR);
     }
 }
 void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
 {
-    Pages->ActivePage->Free();
+    //  ДОБАВИТЬ ЧТОБЫ ПРИ ЗАКРЫТИИ ВКЛАДКИ УМЕНЬШАЛИСЬ ДИНАМИЧЕСКИЕ МАССИВЫ ВКЛАДОК И БЛЭКЛИСТА
+    //	for(int rmIndex = Pages->ActivePage->Controls[0]->Tag; rmIndex< BlackList.High; )
+    //	{
+    //		PageTabs[rmIndex]->Controls[0]->Tag
+    //		BlackList[rmIndex] = BlackList[++rmIndex];
+    //	}
+    //	BlackList.Length--;
+    if (Pages->PageCount > 0)
+    {
+        PageTabs[Pages->ActivePage->Controls[0]->Tag] = nullptr;
+        BlackList[Pages->ActivePage->Controls[0]->Tag].Length = 0;
+        DirNames[Pages->ActivePage->Controls[0]->Tag] = String();
+        Pages->ActivePage->Free();
+        if (Pages->PageCount == 0)
+            int i = 0; // затычка, вызвать констуктор новой пустой вкладки
+        return;
+    }
 }
 //---------------------------------------------------------------------------
 String TMainForm::getFileName()
 {
     if (Pages->ActivePage->Caption == L"Безымянный")
-        return L"";
-    return Pages->ActivePage->Caption;
+        return String();
+    return DirNames[Pages->ActivePage->Controls[0]->Tag] + L'\\' + Pages->ActivePage->Caption;
 }
 
 String SliceAdressToFileName(const String &str)
 {
-    if (str != L"")
+    if (str != String())
     {
         char *slicedFileName = strrchr(AnsiString(str).c_str(), '\\');
         if (slicedFileName != NULL)
@@ -387,7 +381,7 @@ void __fastcall TMainForm::BRemoveSubjectClick(TObject *Sender)
 
 TStatusCode checkSubjectValue(const String &Str)
 {
-    if (Str == L"")
+    if (Str == String())
         return EInvalidInput;
     return EGood;
 }
@@ -436,7 +430,6 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
     bufferSize = fileSize - 16;
     std::streamsize cur = file.tellg();
     {
-        //		char buffer[bufferSize];
         char *buffer = new (std::nothrow) char[bufferSize];
         //	boost::crc_basic<32> *crc = new(std::nothrow) boost::crc_basic<32>(0x27809EA7, 0u, 0u, true, true);
         boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
@@ -457,26 +450,19 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
         //        delete crc;
     }
 
-    //	file.open(AnsiString(FileName).c_str(), std::ios_base::in | std::ios_base::binary);
     file.seekg(16);
-    //	file.seekg(8);
     int studentCount;
     file.read((char *)&studentCount, sizeof(studentCount)); // кол-во студентов и карта имен студентов
     curTable->RowCount = studentCount + 1;
-    //	(*Table).ColCount = studentCount + 1;
     for (int i = 0, curStrSize; i < studentCount; i++)
     {
         file.read((char *)&curStrSize, sizeof(curStrSize));
-        //		String T1;
-        //		file.read((char *)T1.c_str(), curStrSize);
-        //		Table->Cells[1][1 + i] = T1.c_str();
-        curTable->Cells[1][1 + i] = L"";
+
+        curTable->Cells[1][1 + i] = String();
         file.read((char *)curTable->Cells[1][1 + i].c_str(), curStrSize);
         curTable->Cells[1][1 + i] = curTable->Cells[1][1 + i].c_str();
         curTable->Cells[0][i + 1] = IntToStr(i + 1);
-        //		file.read((char *)&Table->Cells[1][1+i], curStrSize);  //////////
     }
-    //	Table->ColCount = studentCount + 1;
 
     int subjectCount;
     file.read((char *)&subjectCount, sizeof(subjectCount)); // кол-во предметов и карта названий предметов
@@ -484,19 +470,10 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
     for (int i = 0, curStrSize; i < subjectCount; i++)
     {
         file.read((char *)&curStrSize, sizeof(curStrSize));
-        //		String T1;
-        //		file.read((char *)T1.c_str(), curStrSize);
-        //		Table->Cells[2 + i][0] = T1.c_str();
-        curTable->Cells[2 + i][0] = L"";
-        file.read((char *)curTable->Cells[2 + i][0].c_str(), curStrSize /*Table->Cells[2 + i][0].Length()*2*/);
-        //        Table->Cells[2 + i][0].SetLength(curStrSize/2);
+        curTable->Cells[2 + i][0] = String();
+        file.read((char *)curTable->Cells[2 + i][0].c_str(), curStrSize);
         curTable->Cells[2 + i][0] = curTable->Cells[2 + i][0].c_str();
-        //		int i1 = Table->Cells[2 + i][0].Length();
-        //		Table->Cells[2 + i][0] = IntToStr(i1);      //Table->Cells[2 + i][0].ElementSize()
-
-        //		file.read((char *)AnsiString(Table->Cells[2+i][0]).c_str(), curStrSize);  //////////
     }
-    //	Table->ColCount = subjectCount + 2;
 
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
         for (int j = 0, tmp; j < subjectCount; j++)
@@ -510,7 +487,6 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
 
 TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, String *FileName)
 {
-    // Добавить проверку файла на существование
     std::fstream file;
     String newFileName;
     if (!FileName)
@@ -523,7 +499,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
             newFileName = DSaveDialog->FileName;
             file.open(AnsiString(newFileName).c_str(), std::ios_base::in);
             if (file.is_open())
-            { //filename +  существует/n Заменить? ,     ПОДТВЕРДИТЬ СОХРАНЕНИЕ, ОТМЕНА НЕТ ДА
+            {
                 int chose = Application->MessageBox((SliceAdressToFileName(newFileName) + L" уже существует\r\nЗамениеть?").w_str(), L"Подтвердить сохранение", MB_YESNOCANCEL);
                 file.close();
                 if (chose == IDCANCEL)
@@ -536,16 +512,12 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
         FileName = &newFileName;
     }
 
-    file.open(AnsiString(*FileName).c_str(), /*std::ios_base::trunc |*/ std::ios_base::out | std::ios_base::binary); //std::ios_base::out | std::ios_base::binary
+    file.open(AnsiString(*FileName).c_str(), std::ios_base::out | std::ios_base::binary);
     if (!file.is_open())
         return EOpenFile;
-    //	int  tsize = 0, thash  = 0 ;
     char signature[4] = "APC";
-    //	int hash = 0;
     file.write((char *)signature, sizeof(signature));
-    //		file.write((char *)&tsize, sizeof(tsize)); //сигнатура
-    //		file.write((char *)&thash, sizeof(thash));           //хэш
-    file.seekp(16); // FileSize 8b + hash 4b
+    file.seekp(16); // skip FileSize 8b + hash 4b
 
     int studentCount = curTable->RowCount - 1; // кол-во студентов и карта имен студентов
     file.write((char *)&studentCount, sizeof(studentCount));
@@ -569,7 +541,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
     file.close();
 
     file.open(AnsiString(*FileName).c_str(), std::ios_base::in);
-    std::streamsize fileSize /* = file.tellp()*/, bufferSize;
+    std::streamsize fileSize, bufferSize;
     file.seekg(0, ios::end);
     fileSize = file.tellg();
 
@@ -582,10 +554,9 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
         char buffer[bufferSize];
         //
         file.seekg(16, std::ios_base::beg);
-        //
         //		while(!file.eof())
         //		{
-        file.read((char *)buffer, bufferSize /*buffer_size*/);
+        file.read((char *)buffer, bufferSize);
         crc.process_bytes(buffer, (std::size_t)bufferSize);
         //		}
         std::streamsize cur = file.tellg();
@@ -648,7 +619,6 @@ void TMainForm::ErrHandler(const String &FileAdress, TStatusBar *status_bar, TSt
         default:
             status_bar->SimpleText = L"Отсутствует обработка данного типа ошибки";
         }
-        //		Application->MessageBox(status_bar->SimpleText.w_str(), Application->Title.w_str(), MB_OK | MB_ICONERROR);
         Application->MessageBox(status_bar->SimpleText.w_str(), L"Ошибка!", MB_OK | MB_ICONERROR);
     }
     else

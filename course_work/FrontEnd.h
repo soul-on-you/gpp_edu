@@ -25,6 +25,10 @@
 #include <System.Win.TaskbarCore.hpp>
 #include <Vcl.Buttons.hpp>
 #include <Vcl.Taskbar.hpp>
+#include <VCLTee.Chart.hpp>
+#include <VclTee.TeeGDIPlus.hpp>
+#include <VCLTee.TeEngine.hpp>
+#include <VCLTee.TeeProcs.hpp>
 //---------------------------------------------------------------------------
 
 enum TStatusCode
@@ -96,7 +100,6 @@ class TMainForm : public TForm
     TSplitter *Splitter1;
     TSplitter *Splitter2;
     TPerformanceGraph *PerformanceGraph1;
-    TPerformanceGraph *PerformanceGraph2;
     TGroupBox *TableBox;
     TOpenDialog *DFileOpen;
     TSaveDialog *DSaveDialog;
@@ -107,7 +110,6 @@ class TMainForm : public TForm
     TEdit *FSubjectName;
     TGroupBox *GroupBox1;
     TPageControl *Pages;
-    TTabSheet *TabSheet0;
     TSpinButton *SBStudentCount;
     TMenuItem *N44;
     TMenuItem *N45;
@@ -120,6 +122,8 @@ class TMainForm : public TForm
     TLabeledEdit *EStudentCount;
     TMenuItem *MenuBExit;
     TStringGrid *Table;
+    TChart *Chart1;
+    TChart *Chart2;
     void __fastcall MenuBOpenFileClick(TObject *Sender);
     void __fastcall MenuBSaveClick(TObject *Sender);
     void __fastcall MenuBSaveAsClick(TObject *Sender);
@@ -143,7 +147,8 @@ private:
     TErrInfo AdditionErrorInformation;
     //	TStudentsData StudentData;
     DynamicArray<TTabSheet *> PageTabs;
-    DynamicArray<TRect> BlackList;
+    DynamicArray<DynamicArray<TRect>> BlackList;
+    DynamicArray<String> DirNames; ///FILENAMES
     TStringGrid *CurTable;
 
 public: // User declarations
@@ -156,7 +161,7 @@ public: // User declarations
     template <typename TOwner, typename TParent>
     void NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelector,
                               /* const TStringGrid *sourse,*/ const String *config = nullptr);
-    void NewTabInit(const TStringGrid *sourse, TPageControl *pageSelector,
+    void NewTabInit(TPageControl *pageSelector,
                     DynamicArray<TTabSheet *> &Tabs, const String *config = nullptr);
 };
 //---------------------------------------------------------------------------
