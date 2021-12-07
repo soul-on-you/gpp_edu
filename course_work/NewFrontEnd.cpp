@@ -8,6 +8,7 @@
 #include <boost/crc.hpp>
 #include <boost/cstdint.hpp>
 #include <fstream>
+#include <cstring> ///для substr
 #include "FrontEnd.h"
 //#include "ExternalDependencies.h"
 //---------------------------------------------------------------------------
@@ -27,6 +28,18 @@ __fastcall TMainForm::TMainForm(TComponent *Owner)
 
 void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
 {
+    if (MenuBSave->Enabled)
+    {
+        int chose = CallSaveDialog();
+        if (chose == IDCANCEL)
+            return;
+        else if (chose == IDYES)
+            MenuBSaveClick(Sender);
+
+        if (StatusCode != EGood)
+            return;
+    }
+
     if (DFileOpen->Execute())
     {
         FileName = DFileOpen->FileName;
@@ -38,7 +51,7 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
             //			StatusBar->SimpleText += L"\tnormalized: " + String(path_to_file.parent_path().normalize().string().c_str());
             Pages->ActivePage->Caption = SliceAdressToFileName(FileName);
             int tag = getCurrentTable()->Tag;
-            int l2 = DirNames.Length;
+            //			int l2 = DirNames.Length;
             DirNames[tag] = (const String &)(String(
                 (
                     (
@@ -46,8 +59,10 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
                         .parent_path()
                         .string()
                         .c_str())));
-            int l = DirNames[tag].Length();
-            StatusBar->SimpleText = DirNames[getCurrentTable()->Tag];
+            //			int l = DirNames[tag].Length();
+            //			StatusBar->SimpleText = DirNames[getCurrentTable()->Tag];
+            EStudentCount->Text = IntToStr(getCurrentTable()->RowCount - 1);
+            ComboBox2->Items->Add(SliceFileNameToFileTitle(Pages->ActivePage->Caption));
         }
         else
             ErrHandler(DFileOpen->FileName, StatusBar, StatusCode, &AdditionErrorInformation);
@@ -57,13 +72,18 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBSaveClick(TObject *Sender)
 {
-    if ((FileName = getFileName()) != String())
+    if (BlackList[Pages->ActivePage->Controls[0]->Tag].Length == 0)
     {
-        if ((StatusCode = SaveMatrix(getCurrentTable() /*Table*/, &AdditionErrorInformation.MemAllocStep, &FileName)) != EGood)
-            ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
+        if ((FileName = getFileName()) != String())
+        {
+            if ((StatusCode = SaveMatrix(getCurrentTable() /*Table*/, &AdditionErrorInformation.MemAllocStep, &FileName)) != EGood)
+                ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
+        }
+        else
+            MenuBSaveAsClick(Sender);
     }
     else
-        MenuBSaveAsClick(Sender);
+        ErrHandler(FileName, StatusBar, StatusCode = InvalidGridValue, &AdditionErrorInformation);
 }
 //---------------------------------------------------------------------------
 
@@ -82,11 +102,10 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-// void __fastcall TForm1::TableKeyPress(TObject *Sender, System::WideChar &Key)
+//void __fastcall TForm1::TableKeyPress(TObject *Sender, System::WideChar &Key)
 //{
 //	MenuBSave->Enabled = true;
-// }
-
+//}
 //---------------------------------------------------------------------------
 
 void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
@@ -138,7 +157,6 @@ void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow, 
     }
     MenuBSave->Enabled = true;
 }
-
 //---------------------------------------------------------------------------
 
 void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow, const TRect &Rect,
@@ -163,8 +181,8 @@ void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow, con
         }
     }
 }
-
 //---------------------------------------------------------------------------
+
 void TMainForm::NewTabInit(TPageControl *pageSelector, DynamicArray<TTabSheet *> &Tabs, const String *config)
 {
     Tabs.Length = Tabs.Length + 1;
@@ -178,7 +196,6 @@ void TMainForm::NewTabInit(TPageControl *pageSelector, DynamicArray<TTabSheet *>
     DirNames.Length++;
     //	StatusBar->SimpleText =  Tabs[Tabs.High]->Tag;
 }
-
 //---------------------------------------------------------------------------
 
 template <typename TOwner, typename TParent>
@@ -202,13 +219,14 @@ void TMainForm::NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelec
     createdTable->OnSetEditText = GridSetEditText;
     createdTable->OnDrawCell = GridDrawCell;
 }
+//--------------------------------------------------------------------------
 
 void __fastcall TMainForm::SBStudentCountDownClick(TObject *Sender)
 {
     TStringGrid *curTable = getCurrentTable();
     if (curTable->RowCount > 2)
     {
-        EStudentCount->Text = curTable->RowCount - 2;
+        EStudentCount->Text = IntToStr(curTable->RowCount - 2);
         GridManageRow(curTable->RowCount - 1, curTable);
     }
 }
@@ -216,7 +234,7 @@ void __fastcall TMainForm::SBStudentCountDownClick(TObject *Sender)
 
 void __fastcall TMainForm::SBStudentCountUpClick(TObject *Sender)
 {
-    EStudentCount->Text = getCurrentTable()->RowCount;
+    EStudentCount->Text = IntToStr(getCurrentTable()->RowCount);
     GridManageRow(getCurrentTable()->RowCount + 1, getCurrentTable());
 }
 //---------------------------------------------------------------------------
@@ -231,7 +249,7 @@ void __fastcall TMainForm::EStudentCountKeyDown(TObject *Sender, WORD &Key, TShi
             int tmp;
             if (TryStrToInt(EStudentCount->Text, tmp) && tmp > 1)
             {
-                EStudentCount->Text = tmp;
+                EStudentCount->Text = IntToStr(tmp);
                 GridManageRow(tmp + 1, getCurrentTable());
                 return;
             }
@@ -256,7 +274,7 @@ void GridManageRow(int rowCount, TStringGrid *gridSelector)
         for (int i = rowCount - 1, rowCount = gridSelector->RowCount; i < rowCount;)
         {
             for (int j = 1; j < gridSelector->ColCount;)
-                gridSelector->Cells[j++][i + 1] = String(); // String();
+                gridSelector->Cells[j++][i + 1] = String(); //String();
             gridSelector->Cells[0][i] = IntToStr(i++);
         }
     }
@@ -265,6 +283,7 @@ void GridManageRow(int rowCount, TStringGrid *gridSelector)
         gridSelector->RowCount = rowCount;
     }
 }
+//--------------------------------------------------------------------------
 
 void GridManageCol(const String *subjects, int colCount, TStringGrid *gridSelector)
 {
@@ -310,6 +329,8 @@ void GridManageCol(const String *subjects, int colCount, TStringGrid *gridSelect
             Application->MessageBox(String(L"Неудалось удалить предметы: " + fallsRemove).w_str(), L"Ошибка!", MB_OK | MB_ICONERROR);
     }
 }
+//--------------------------------------------------------------------------
+
 void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
 {
     //  ДОБАВИТЬ ЧТОБЫ ПРИ ЗАКРЫТИИ ВКЛАДКИ УМЕНЬШАЛИСЬ ДИНАМИЧЕСКИЕ МАССИВЫ ВКЛАДОК И БЛЭКЛИСТА
@@ -321,22 +342,43 @@ void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
     //	BlackList.Length--;
     if (Pages->PageCount > 0)
     {
+        if (MenuBSave->Enabled)
+        {
+            int chose = CallSaveDialog();
+            if (chose == IDCANCEL)
+                return;
+            else if (chose == IDYES)
+                MenuBSaveClick(Sender);
+
+            if (StatusCode != EGood)
+                return;
+        }
         PageTabs[Pages->ActivePage->Controls[0]->Tag] = nullptr;
         BlackList[Pages->ActivePage->Controls[0]->Tag].Length = 0;
         DirNames[Pages->ActivePage->Controls[0]->Tag] = String();
         Pages->ActivePage->Free();
         if (Pages->PageCount == 0)
-            int i = 0; // затычка, вызвать констуктор новой пустой вкладки
-        return;
+            MenuBOpenWindowClick(Sender);
+        //			int i = 0; // затычка, вызвать констуктор новой пустой вкладки
+        //		return;
     }
 }
 //---------------------------------------------------------------------------
+
+void substr(char *dest, char *source, int from, int length)
+{
+    strncpy(dest, source + from, length);
+    dest[length] = 0;
+}
+//---------------------------------------------------------------------------
+
 String TMainForm::getFileName()
 {
     if (Pages->ActivePage->Caption == L"Безымянный")
         return String();
     return DirNames[Pages->ActivePage->Controls[0]->Tag] + L'\\' + Pages->ActivePage->Caption;
 }
+//---------------------------------------------------------------------------
 
 String SliceAdressToFileName(const String &str)
 {
@@ -348,6 +390,27 @@ String SliceAdressToFileName(const String &str)
     }
     return str;
 }
+//---------------------------------------------------------------------------
+
+String SliceFileNameToFileTitle(const String &str)
+{
+    if (str != String())
+    {
+        //		char *slicedFileName = strrchr(AnsiString(str).c_str(), '\\');
+        //		if (slicedFileName != NULL)
+        //			return String(++slicedFileName);
+        char *startPoint = AnsiString(str).c_str(),
+             *slicedFileName = strrchr(startPoint, '.');
+        if (slicedFileName != NULL)
+        {
+            char slicedFileTitle[slicedFileName - startPoint];
+            substr(slicedFileTitle, startPoint, 0, slicedFileName - startPoint);
+            return String(slicedFileTitle);
+        }
+    }
+    return str;
+}
+//---------------------------------------------------------------------------
 
 TStringGrid *TMainForm::getCurrentTable()
 {
@@ -385,6 +448,7 @@ TStatusCode checkSubjectValue(const String &Str)
         return EInvalidInput;
     return EGood;
 }
+//---------------------------------------------------------------------------
 
 void __fastcall TMainForm::MenuBExitClick(TObject *Sender)
 {
@@ -393,7 +457,6 @@ void __fastcall TMainForm::MenuBExitClick(TObject *Sender)
 //---------------------------------------------------------------------------
 
 /////////////FILE IN/OUT
-
 TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable, int *EMemAllocStep)
 {
     ifstream file;
@@ -436,7 +499,7 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
         file.seekg(16);
         //		while(!file.eof())
         //		{
-        file.read((char *)buffer, bufferSize); // buffer_size
+        file.read((char *)buffer, bufferSize); //buffer_size
         crc.process_bytes(buffer, (std::size_t)bufferSize);
         //		}
         delete[] buffer;
@@ -483,6 +546,7 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
     file.close();
     return EGood;
 }
+//--------------------------------------------------------------------------
 
 TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, String *FileName)
 {
@@ -499,7 +563,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
             file.open(AnsiString(newFileName).c_str(), std::ios_base::in);
             if (file.is_open())
             {
-                int chose = Application->MessageBox((SliceAdressToFileName(newFileName) + L" уже существует\r\nЗамениеть?").w_str(), L"Подтвердить сохранение", MB_YESNOCANCEL);
+                int chose = Application->MessageBox((SliceAdressToFileName(newFileName) + L" уже существует\r\nЗаменить?").w_str(), L"Подтвердить сохранение", MB_YESNOCANCEL);
                 file.close();
                 if (chose == IDCANCEL)
                     return EGood;
@@ -526,7 +590,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
         file.write((char *)curTable->Cells[1][1 + i].c_str(), sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2);
     }
 
-    // if (file.fail()) ДОБАВИТЬ К КАЖДОМУ WRITE МОЖЕТ НЕ ХВАТИТЬ ПАМЯТИ
+    //if (file.fail()) ДОБАВИТЬ К КАЖДОМУ WRITE МОЖЕТ НЕ ХВАТИТЬ ПАМЯТИ
     int subjectCount = curTable->ColCount - 2; // кол-во предметов и карта названий предметов
     file.write((char *)&subjectCount, sizeof(subjectCount));
     for (int i = 0; i < subjectCount; i++)
@@ -558,10 +622,11 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
         file.read((char *)buffer, bufferSize);
         crc.process_bytes(buffer, (std::size_t)bufferSize);
         //		}
-        std::streamsize cur = file.tellg();
-        file.seekg(-1, std::ios_base::cur);
-        cur = file.tellg();
-        int i = cur;
+        //DEBUG
+        //		std::streamsize cur = file.tellg();
+        //		file.seekg(-1, std::ios_base::cur);
+        //		cur = file.tellg();
+        //		int i = cur;
     }
     file.close();
     //	delete[] buffer;
@@ -577,7 +642,6 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep, Str
     MenuBSave->Enabled = false;
     return EGood;
 }
-
 //---------------------------------------------------------------------------
 
 //////////////////////////ERROR HANDLER
@@ -615,6 +679,9 @@ void TMainForm::ErrHandler(const String &FileAdress, TStatusBar *status_bar, TSt
             else
                 status_bar->SimpleText = L"Ошибка, в поле ничего не указано";
             break;
+        case InvalidGridValue:
+            status_bar->SimpleText = L"Исправьте неправильные значения элементов";
+            break;
         default:
             status_bar->SimpleText = L"Отсутствует обработка данного типа ошибки";
         }
@@ -623,6 +690,7 @@ void TMainForm::ErrHandler(const String &FileAdress, TStatusBar *status_bar, TSt
     else
         status_bar->SimpleText = L"Код ошибки: " + IntToStr(status_code);
 }
+//--------------------------------------------------------------------------
 
 void __fastcall TMainForm::N44Click(TObject *Sender)
 {
@@ -669,3 +737,105 @@ int TMainForm::CallSaveDialog()
                                        Application->Title.w_str(), MB_YESNOCANCEL | MB_ICONQUESTION);
     }
 }
+void __fastcall TMainForm::PagesChange(TObject *Sender)
+{
+    //ДОБАВИТЬ СОБЫТИЕ СМЕНЫ ЧЕГО-ТО ВСЕГО НА ТЕКУЩЕЕ, ПОДУМАТЬ НАД
+    // ОБЪЕДИНЕНИЕМ ДАННЫХ В СТРУКТУРУ ДЛЯ КАЖДОГО СОЗДАННОГО ОБЪЕКТА ТАБА И ТАБЛИЧКИ
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BFunctionHandle1Click(TObject *Sender)
+{
+    TStringGrid *curGrid = getCurrentTable();
+    ClearSeries(Chart1);
+    for (int Col = 2; Col < curGrid->ColCount; Col++) // тут кол-во графиков
+    {
+        //		TLineSeries *Series = new TLineSeries(Chart1);
+        //		Chart1->AddSeries(Series);
+        //		for (int Col = 1; Col <= curGrid->ColCount; Col++) // длинна созданного графика
+        //		{
+        //			Series[0].AddXY(curGrid->Cells[0][Col].ToDouble(), //установка точек
+        //			curGrid->Cells[Row][Col].ToDouble());
+        //		}
+        TLineSeries *Series = new TLineSeries(Chart1);
+        Chart1->AddSeries(Series);
+        for (int Row = 1; Row < curGrid->RowCount; Row++) // длинна созданного графика
+        {
+            Series[0].AddXY(curGrid->Cells[0][Row].ToDouble(), //установка точек
+                            curGrid->Cells[Col][Row].ToDouble());
+        }
+    }
+    //		for(int Col = 2; Col < curGrid->ColCount; Col++)
+    //		{
+    //			TLineSeries *LSeries = new TLineSeries(Chart1);
+    //			Chart1->AddSeries(LSeries);
+    //			int Midle =  0;
+    //			for (int Row = 0; Row < curGrid->RowCount; Row++)
+    //			{
+    //				 Midle += StrToInt(curGrid->Cells[Col][Row]);
+    //			}
+    //			LSeries[Col-2].AddXY(curGrid->Cells[Col][0], (Midle/1.0)/curGrid->RowCount);
+    //		}
+    //	TChartSeries *LineSeries = new TLineSeries(Chart1);
+    //	Chart1->AddSeries(LineSeries);
+    // Исходные данные для графика
+    //	array <double> *yval1 = { 10, 6, 4, 6, 3 };
+    //	array <System::String *> *xval = { "Январь", "Февраль", "Март", "Апрель", "Май" };
+    //	for(int Col = 2; Col < curGrid->ColCount; Col++)
+    //	{
+    //		int Midle =  0;
+    //		for (int Row = 1; Row < curGrid->RowCount; Row++)
+    //		{
+    //			 Midle += StrToInt(curGrid->Cells[Col][Row]);
+    //		}
+    //		LineSeries[Col-2].AddXY(curGrid->Cells[0][Col-1].ToDouble(), (Midle/1.0)/curGrid->RowCount);
+    //	}
+    //	mySeries1->Points->DataBindXY(xval, yval1);
+    //фон градиентом
+    //	Chart1->BackColor = System::Drawing::Color::MistyRose;
+    //	Chart1->BackGradientStyle = GradientStyle::DiagonalLeft;
+    //	//границы в современном стиле
+    //	Chart1->BorderSkin->SkinStyle = BorderSkinStyle::Sunken;
+    //	Chart1->BorderSkin->PageColor = this->BackColor;
+    //	//линии сетки покажем разными цветами
+    //	myChartArea->AxisX->MajorGrid->LineColor = System::Drawing::SystemColors::ControlDark;
+    //	myChartArea->AxisY->MajorGrid->LineColor = System::Drawing::SystemColors::ControlLight;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BFunctionHandle2Click(TObject *Sender)
+{
+    Chart1->View3DOptions->Orthogonal = false;
+    Chart1->View3DOptions->Perspective = 0;
+    Chart1->View3DOptions->Zoom = 100;
+    Chart1->View3DOptions->Elevation = 360;
+    Chart1->View3DOptions->Rotation = 360;
+    ClearSeries(Chart1);
+    TBarSeries *Series = new TBarSeries(Chart1);
+    Chart1->AddSeries(Series);
+    // добавляем новый столбец - всё зависит от типа выбранного chart
+    TStringGrid *curGrid = getCurrentTable();
+    for (int Col = 2; Col < curGrid->ColCount; Col++) // тут кол-во графиков
+    {
+        int Sum = 0;
+        for (int Row = 1; Row < curGrid->RowCount; Row++) // длинна созданного графика
+        {
+            //			Series[0].AddXY(curGrid->Cells[0][Row].ToDouble(), //установка точек
+            //			curGrid->Cells[Col][Row].ToDouble());
+            Sum += StrToInt(curGrid->Cells[Col][Row]);
+        }
+        Series->Add(Sum / 1.0 / curGrid->RowCount, curGrid->Cells[Col][0], (TColor)clTeeColor);
+    }
+    //	Series->Add(10,"First",(TColor)clTeeColor );
+    //	Series->Add(20,"Second",(TColor)clTeeColor );
+    //	Series->Add(20,"Third",(TColor)clTeeColor );
+    //	Series->Add(40,"Four",(TColor)clTeeColor );
+}
+//---------------------------------------------------------------------------
+
+void TMainForm::ClearSeries(TChart *Chart)
+{
+    for (int i = 0, SeriesCount = Chart->SeriesCount(); i < SeriesCount; i++)
+        Chart->SeriesList->Delete(0);
+}
+//--------------------------------------------------------------------------
