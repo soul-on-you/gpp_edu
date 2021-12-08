@@ -22,7 +22,7 @@ TMainForm *MainForm;
 // ---------------------------------------------------------------------------
 __fastcall TMainForm::TMainForm(TComponent *Owner) : TForm(Owner)
 {
-    NewTabInit(Pages, PageTabs);
+    NewTabInit(Pages, PageTabs); //DElete PageTabs
 }
 // ---------------------------------------------------------------------------
 
@@ -42,26 +42,19 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
 
     if (DFileOpen->Execute())
     {
-        // FileName = DFileOpen->FileName;
         StatusCode = LoadMatrix(DFileOpen->FileName, CurTable,
                                 &AdditionErrorInformation.MemAllocStep);
         if (StatusCode == EGood)
         {
-            Pages->ActivePage->Caption =
-                SliceAdressToFileName(DFileOpen->FileName);
-            // int tag = getCurrentTable()->Tag;
-            int tag = Pages->TabIndex;
-            DirNames[tag] =
+            //			Pages->ActivePage->Caption = ChangeTabCaption(
+            //									SliceAdressToFileName(DFileOpen->FileName));
+            ChangeTabCaption(SliceAdressToFileName(DFileOpen->FileName));
+            DirNames[Pages->TabIndex] =
                 (const String &)(String((((const boost::filesystem::path &)(boost::filesystem::path(DFileOpen->FileName.c_str())))
                                              .parent_path()
                                              .string()
                                              .c_str())));
             EStudentCount->Text = IntToStr(CurTable->RowCount - 1);
-            CBStudentGroup->Items->Insert(Pages->TabIndex <
-                                                  CBStudentGroup->Items->Count
-                                              ? Pages->TabIndex
-                                              : CBStudentGroup->Items->Count,
-                                          SliceFileNameToFileTitle(Pages->ActivePage->Caption));
         }
         else
             ErrHandler(DFileOpen->FileName, StatusBar, StatusCode,
@@ -72,21 +65,24 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBSaveClick(TObject *Sender)
 {
-    if (BlackList[Pages->ActivePage->Controls[0]->Tag].Length == 0)
+    if (BlackList[Pages->TabIndex].Length == 0)
     {
-        if ((/* DFileOpen->FileName = String(), */ getFileName()) != String())
+        DSaveDialog->FileName = getFileName(), String();
+        if (DSaveDialog->FileName != String())
         {
-            if ((StatusCode = SaveMatrix(CurTable,
-                                         &AdditionErrorInformation.MemAllocStep,
-                                         &(String &)(const String &)(getFileName()))) != EGood)
-                ErrHandler(FileName, StatusBar, StatusCode,
-                           &AdditionErrorInformation);
+            if ((StatusCode = SaveMatrix(CurTable, &AdditionErrorInformation.MemAllocStep,
+                                         &(String &)(const String &)(DSaveDialog->FileName))) == EGood)
+            {
+                MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
+                return;
+            }
+            ErrHandler(DSaveDialog->FileName, StatusBar, StatusCode, &AdditionErrorInformation);
         }
         else
             MenuBSaveAsClick(Sender);
     }
     else
-        ErrHandler(FileName, StatusBar, StatusCode = InvalidGridValue,
+        ErrHandler(DSaveDialog->FileName, StatusBar, StatusCode = InvalidGridValue,
                    &AdditionErrorInformation);
 }
 // ---------------------------------------------------------------------------
@@ -97,10 +93,12 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
                                  &AdditionErrorInformation.MemAllocStep)) == EGood)
     {
         // if (FileName != String())   МАЛОВЕРНОЯТНО ЧТО ЧТО-ТО СЛУЧИТСЯ
-        Pages->ActivePage->Caption = SliceAdressToFileName(FileName);
+        //		Pages->ActivePage->Caption = SliceAdressToFileName(DSaveDialog->FileName);
+        ChangeTabCaption(SliceAdressToFileName(DSaveDialog->FileName));
+        MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
     }
     else if (StatusCode != ECancel)
-        ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
+        ErrHandler(DSaveDialog->FileName, StatusBar, StatusCode, &AdditionErrorInformation);
 }
 // ---------------------------------------------------------------------------
 
@@ -112,44 +110,13 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 {
-    NewTabInit(Pages, PageTabs);
+    NewTabInit(Pages, PageTabs); //DElete PageTabs
 }
 // ---------------------------------------------------------------------------
 
 void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow,
                                            const UnicodeString Value)
 {
-    // TStringGrid *localCurTable = (TStringGrid *)Sender;              // потом еще раз посмотреть, фактически могу просто использовать CurTable
-    // if (ACol >= 2 && ACol >= 1)
-    // {
-    // TRect curRect = localCurTable->CellRect(ACol, ARow);
-    // char Sym = *AnsiString(localCurTable->Cells[ACol][ARow]).c_str();
-    // if (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '1' && Sym != 'Б' && Sym != 'Н' && Sym != '?')
-    // {
-    // bool notContrainsRect = true;
-    // for (int i = 0; i < BlackList[localCurTable->Tag].Length && notContrainsRect;
-    // notContrainsRect = (/*curBlackList*/BlackList[localCurTable->Tag][i++] == curRect) ? false : true);
-    // if(notContrainsRect)
-    // {
-    // /*curBlackList*/BlackList[localCurTable->Tag].Length++;
-    ////				int l = /*curBlackList*/BlackList[curTable->Tag].Length;  DEBUG
-    // /*curBlackList*/BlackList[localCurTable->Tag][/*curBlackList*/BlackList[localCurTable->Tag].High] = curRect;
-    // }
-    // }
-    // else // смена цвета клетки на белый
-    // {
-    // for (int i = 0; i < /*curBlackList*/BlackList[localCurTable->Tag].Length; i++)
-    // {
-    // if (/*curBlackList*/BlackList[localCurTable->Tag][i] == curRect)
-    // {
-    // /*curBlackList*/BlackList[localCurTable->Tag][i] = /*curBlackList*/BlackList[localCurTable->Tag][/*curBlackList*/BlackList[localCurTable->Tag].High];
-    // /*curBlackList*/BlackList[localCurTable->Tag].Length--;
-    ////					int l = /*curBlackList*/BlackList[curTable->Tag].Length;  DEBUG
-    // break;
-    // }
-    // }
-    // }
-    // }
     if (ACol >= 2 && ACol >= 1)
     {
         TRect curRect = CurTable->CellRect(ACol, ARow);
@@ -231,20 +198,32 @@ void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow,
 // ---------------------------------------------------------------------------
 
 void TMainForm::NewTabInit(TPageControl *pageSelector,
-                           DynamicArray<TTabSheet *> &Tabs, const String *config)
+                           DynamicArray<TTabSheet *> &Tabs, const String *config) //DElete PageTabs
 {
-    Tabs.Length = Tabs.Length + 1;
-    Tabs[Tabs.High] = new TTabSheet(pageSelector);
-    Tabs[Tabs.High]->PageControl = pageSelector;
-    Tabs[Tabs.High]->Caption = L"Безымянный";
-    String Check = Tabs[Tabs.High]->Caption;
-    NewStudentsTableInit(Tabs[Tabs.High], Tabs[Tabs.High]);
+    //	Tabs.Length++;
+    //	Tabs[Tabs.High] = new TTabSheet(pageSelector);
+    //	Tabs[Tabs.High]->PageControl = pageSelector;
+    ////	Tabs[Tabs.High]->Caption = L"Безымянный";
+    //	String Check = Tabs[Tabs.High]->Caption;
+    //	NewStudentsTableInit(Tabs[Tabs.High], Tabs[Tabs.High]);
+    //	BlackList.Length++;
+    ////	Tabs[Tabs.High]->Controls[0]->Tag = BlackList.High;
+    //	DirNames.Length++;
+    //	ModifiedFlag.Length++;
+    //	ModifiedFlag[ModifiedFlag.High] = false;
+    //	Pages->ActivePage = PageTabs[PageTabs.High];
+    //	ChangeTabCaption(L"Безымянный");
+    //	PagesChange(MainForm);
+
+    TTabSheet *Tab = new TTabSheet(pageSelector);
+    Tab->PageControl = pageSelector;
+    NewStudentsTableInit(Tab, Tab);
     BlackList.Length++;
-    Tabs[Tabs.High]->Controls[0]->Tag = BlackList.High;
     DirNames.Length++;
     ModifiedFlag.Length++;
     ModifiedFlag[ModifiedFlag.High] = false;
-    Pages->ActivePage = PageTabs[PageTabs.High];
+    Pages->ActivePage = Tab;
+    ChangeTabCaption(L"Безымянный");
     PagesChange(MainForm);
 }
 // ---------------------------------------------------------------------------
@@ -407,7 +386,7 @@ void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
         }
         for (int i = Pages->TabIndex; i < Pages->PageCount - 1; i++)
         {
-            PageTabs[i] = PageTabs[i + 1];
+            //            PageTabs[i] = PageTabs[i + 1];   //DElete PageTabs
             BlackList[i] = BlackList[i + 1];
             DirNames[i] = DirNames[i + 1];
             ModifiedFlag[i] = ModifiedFlag[i + 1];
@@ -415,7 +394,7 @@ void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
         // String s = CBStudentGroup->Items->in
         // int deleteID =  CBStudentGroup->Items->IndexOfName(SliceFileNameToFileTitle(Pages->ActivePage->Caption));
         CBStudentGroup->Items->Delete(Pages->TabIndex);
-        PageTabs.Length--;
+        //		PageTabs.Length--;    //DElete PageTabs
         BlackList.Length--;
         DirNames.Length--;
         ModifiedFlag.Length--;
@@ -439,7 +418,7 @@ String TMainForm::getFileName()
 {
     if (Pages->ActivePage->Caption == L"Безымянный")
         return String();
-    return DirNames[Pages->ActivePage->Controls[0]->Tag] + L'\\' +
+    return DirNames[Pages->TabIndex] + L'\\' +
            Pages->ActivePage->Caption;
 }
 // ---------------------------------------------------------------------------
@@ -808,22 +787,21 @@ void __fastcall TMainForm::MenuBNewFileClick(TObject *Sender)
         else if (chose == IDYES)
             MenuBSaveClick(Sender);
 
-        if (StatusCode == EGood)
-        {
-            int curPageIndex = Pages->TabIndex;
-            Pages->ActivePage->Controls[0]->Free();
-            NewStudentsTableInit(PageTabs[curPageIndex],
-                                 PageTabs[curPageIndex]);
-        }
+        if (StatusCode != EGood)
+            return;
     }
+    //	 int curPageIndex = Pages->TabIndex;
+    Pages->ActivePage->Controls[0]->Free();
+    NewStudentsTableInit(Pages->ActivePage, Pages->ActivePage);
+    ChangeTabCaption(L"Безымянный");
 }
 // ---------------------------------------------------------------------------
 
 int TMainForm::CallSaveDialog()
 {
-    if ((FileName = getFileName()) != String())
+    if ((DFileOpen->FileName = String(), getFileName()) != String())
     {
-        return Application->MessageBox((String(L"Сохранить изменения в файле \"") + FileName + L"\"?")
+        return Application->MessageBox((String(L"Сохранить изменения в файле \"") + DFileOpen->FileName + L"\"?")
                                            .w_str(),
                                        Application->Title.w_str(),
                                        MB_YESNOCANCEL | MB_ICONQUESTION);
@@ -892,4 +870,14 @@ void TMainForm::ClearSeries(TChart *Chart)
         Chart->SeriesList->Delete(0);
 }
 // --------------------------------------------------------------------------
-__declspec(uuid("{B0EBBA48-6A0E-4AD4-AD23-DE4F5D8510B0}"))
+
+void TMainForm::ChangeTabCaption(const String &newName)
+{
+    CBStudentGroup->Items->Delete(Pages->TabIndex);
+    Pages->ActivePage->Caption = newName;
+    CBStudentGroup->Items->Insert(Pages->TabIndex <
+                                          CBStudentGroup->Items->Count
+                                      ? Pages->TabIndex
+                                      : CBStudentGroup->Items->Count,
+                                  SliceFileNameToFileTitle(Pages->ActivePage->Caption));
+}
