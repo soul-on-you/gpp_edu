@@ -10,7 +10,6 @@
 #include <fstream>
 #include <cstring> ///для substr
 #include "FrontEnd.h"
-// #include "ExternalDependencies.h"
 // ---------------------------------------------------------------------------
 #pragma package(smart_init)
 #pragma link "perfgrap"
@@ -22,7 +21,6 @@ TMainForm *MainForm;
 // ---------------------------------------------------------------------------
 __fastcall TMainForm::TMainForm(TComponent *Owner) : TForm(Owner)
 {
-    //	NewTabInit(Pages, PageTabs);   //DElete PageTabs
     NewTabInit(Pages);
 }
 // ---------------------------------------------------------------------------
@@ -47,8 +45,6 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
                                 &AdditionErrorInformation.MemAllocStep);
         if (StatusCode == EGood)
         {
-            //			Pages->ActivePage->Caption = ChangeTabCaption(
-            //									SliceAdressToFileName(DFileOpen->FileName));
             ChangeTabCaption(SliceAdressToFileName(DFileOpen->FileName));
             DirNames[Pages->TabIndex] =
                 (const String &)(String((((const boost::filesystem::path &)(boost::filesystem::path(DFileOpen->FileName.c_str())))
@@ -93,8 +89,6 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
     if ((StatusCode = SaveMatrix(CurTable,
                                  &AdditionErrorInformation.MemAllocStep)) == EGood)
     {
-        // if (FileName != String())   МАЛОВЕРНОЯТНО ЧТО ЧТО-ТО СЛУЧИТСЯ
-        //		Pages->ActivePage->Caption = SliceAdressToFileName(DSaveDialog->FileName);
         ChangeTabCaption(SliceAdressToFileName(DSaveDialog->FileName));
         MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
     }
@@ -103,15 +97,8 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 }
 // ---------------------------------------------------------------------------
 
-// void __fastcall TForm1::TableKeyPress(TObject *Sender, System::WideChar &Key)
-// {
-// MenuBSave->Enabled = true;
-// }
-// ---------------------------------------------------------------------------
-
 void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 {
-    //	NewTabInit(Pages, PageTabs);   //DElete PageTabs
     NewTabInit(Pages);
 }
 // ---------------------------------------------------------------------------
@@ -181,8 +168,6 @@ void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow,
 }
 // ---------------------------------------------------------------------------
 
-//void TMainForm::NewTabInit(TPageControl *pageSelector,
-//						   DynamicArray<TTabSheet *> &Tabs, const String *config)        //DElete PageTabs
 void TMainForm::NewTabInit(TPageControl *pageSelector, const String *config)
 {
     TTabSheet *Tab = new TTabSheet(pageSelector);
@@ -355,15 +340,11 @@ void __fastcall TMainForm::MenuBCloseWindowClick(TObject *Sender)
         }
         for (int i = Pages->TabIndex; i < Pages->PageCount - 1; i++)
         {
-            //            PageTabs[i] = PageTabs[i + 1];   //DElete PageTabs
             BlackList[i] = BlackList[i + 1];
             DirNames[i] = DirNames[i + 1];
             ModifiedFlag[i] = ModifiedFlag[i + 1];
         }
-        // String s = CBStudentGroup->Items->in
-        // int deleteID =  CBStudentGroup->Items->IndexOfName(SliceFileNameToFileTitle(Pages->ActivePage->Caption));
         CBStudentGroup->Items->Delete(Pages->TabIndex);
-        //		PageTabs.Length--;    //DElete PageTabs
         BlackList.Length--;
         DirNames.Length--;
         ModifiedFlag.Length--;
@@ -419,13 +400,6 @@ String SliceFileNameToFileTitle(const String &str)
     }
     return str;
 }
-// ---------------------------------------------------------------------------
-
-// TStringGrid *TMainForm::getCurrentTable()
-// {
-// return (TStringGrid *)Pages->ActivePage->Controls[0];
-// }
-
 // ---------------------------------------------------------------------------
 
 void __fastcall TMainForm::BAppendSubjectClick(TObject *Sender)
@@ -485,39 +459,39 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
         file.close();
         return EFileIntegrity;
     }
-    //
+
     std::streamsize fileSize, bufferSize;
     file.read((char *)&fileSize, sizeof(fileSize));
     {
-        file.seekg(0, std::ios_base::end);
-        std::streamsize realFileSize = file.tellg();
-        // std::streamsize realFileSize = boost::filesystem::file_size(AnsiString(FileName).c_str());
+        std::streamsize realFileSize = boost::filesystem::file_size(AnsiString(FileName).c_str());
         if (realFileSize != fileSize)
         {
             file.close();
             return EFileIntegrity;
         }
     }
-    file.seekg(12);
+
     unsigned int hash;
     file.read((char *)&hash, sizeof(hash)); // хэш
-    // if(fileSize > 1036)
-    // bufferSize = 1024;
-    // else
+                                            //	 if(fileSize > 1036)
+                                            //		bufferSize = 1024;
+                                            //	 else
     bufferSize = fileSize - 16;
-    std::streamsize cur = file.tellg();
     {
         char *buffer = new (std::nothrow) char[bufferSize];
         // boost::crc_basic<32> *crc = new(std::nothrow) boost::crc_basic<32>(0x27809EA7, 0u, 0u, true, true);
         boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
         file.seekg(16);
-        // while(!file.eof())
-        // {
+        //		while(!file.eof())
+        //		{
         file.read((char *)buffer, bufferSize); // buffer_size
         crc.process_bytes(buffer, (std::size_t)bufferSize);
-        // }
+        //		}
+        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
+             d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
+        std::streamsize cur = file.tellg();
         delete[] buffer;
-        // unsigned int check = crc->checksum();
+        unsigned int check = crc.checksum();
         if (hash != crc.checksum())
         {
             file.close();
@@ -571,6 +545,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
     String newFileName;
     if (!FileName)
     {
+
         while (true)
         {
             if (!DSaveDialog->Execute())
@@ -637,23 +612,27 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
 
     boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
     {
-        // if(fileSize > 1036)
-        // bufferSize = 1024;
-        // else
+        //		if(fileSize > 1036)
+        //			bufferSize = 1024;
+        //		else
         bufferSize = fileSize - 16;
-        char buffer[bufferSize];
-        //
+
+        //		char buffer[bufferSize];
+        char *buffer = new (std::nothrow) char[bufferSize];
         file.seekg(16, std::ios_base::beg);
-        // while(!file.eof())
-        // {
+        //		 while(!file.eof())
+        //		{
         file.read((char *)buffer, bufferSize);
         crc.process_bytes(buffer, (std::size_t)bufferSize);
-        // }
+        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
+             d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
+        //		}
+        delete[] buffer;
         // DEBUG
-        // std::streamsize cur = file.tellg();
-        // file.seekg(-1, std::ios_base::cur);
-        // cur = file.tellg();
-        // int i = cur;
+        std::streamsize cur = file.tellg();
+        file.seekg(-1, std::ios_base::cur);
+        cur = file.tellg();
+        int i = cur;
     }
     file.close();
     // delete[] buffer;
@@ -753,7 +732,6 @@ void __fastcall TMainForm::MenuBNewFileClick(TObject *Sender)
         if (StatusCode != EGood)
             return;
     }
-    //	 int curPageIndex = Pages->TabIndex;
     Pages->ActivePage->Controls[0]->Free();
     NewStudentsTableInit(Pages->ActivePage, Pages->ActivePage);
     ChangeTabCaption(L"Безымянный");
