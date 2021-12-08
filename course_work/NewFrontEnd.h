@@ -35,15 +35,15 @@
 
 enum TStatusCode
 {
-	EGood = 0,
+    EGood = 0,
     ECancel,
     EEmptyFile,
     EMemAlloc,
     EFileIntegrity,
     EOpenFile,
     ESaveFile,
-	EInvalidInput,
-	InvalidGridValue
+    EInvalidInput,
+    InvalidGridValue
 };
 
 union TErrInfo
@@ -55,7 +55,7 @@ union TErrInfo
 class TMainForm : public TForm
 {
     __published : // IDE-managed Components
-	TMainMenu *MainMenu1;
+                  TMainMenu *MainMenu1;
     TGroupBox *LeftBox;
     TGroupBox *RightBox;
     TStatusBar *StatusBar;
@@ -106,7 +106,7 @@ class TMainForm : public TForm
     TGroupBox *TableBox;
     TOpenDialog *DFileOpen;
     TSaveDialog *DSaveDialog;
-	TFontDialog *FontDialog;
+    TFontDialog *FontDialog;
     TFindDialog *FindDialog1;
     TReplaceDialog *ReplaceDialog1;
     TMenuItem *N43;
@@ -125,15 +125,15 @@ class TMainForm : public TForm
     TLabeledEdit *EStudentCount;
     TMenuItem *MenuBExit;
     TStringGrid *Table;
-	TChart *Chart1;
-	TButton *BFunctionHandle1;
-	TButton *BFunctionHandle2;
-	TLineSeries *Series1;
-	TPanel *PChartManage;
-	TComboBox *ComboBox1;
-	TComboBox *ComboBox2;
-	TSpeedButton *SpeedButton1;
-	void __fastcall MenuBOpenFileClick(TObject *Sender);
+    TChart *Chart1;
+    TButton *BFunctionHandle1;
+    TButton *BFunctionHandle2;
+    TLineSeries *Series1;
+    TPanel *PChartManage;
+    TComboBox *ComboBox1;
+    TComboBox *CBStudentGroup;
+    TSpeedButton *SpeedButton1;
+    void __fastcall MenuBOpenFileClick(TObject *Sender);
     void __fastcall MenuBSaveClick(TObject *Sender);
     void __fastcall MenuBSaveAsClick(TObject *Sender);
     //	void __fastcall TableKeyPress(TObject *Sender, System::WideChar &Key);
@@ -141,44 +141,46 @@ class TMainForm : public TForm
     void __fastcall SBStudentCountDownClick(TObject *Sender);
     void __fastcall SBStudentCountUpClick(TObject *Sender);
     void __fastcall EStudentCountKeyDown(TObject *Sender, WORD &Key, TShiftState Shift);
-	void __fastcall MenuBCloseWindowClick(TObject *Sender);
+    void __fastcall MenuBCloseWindowClick(TObject *Sender);
     void __fastcall GridSetEditText(TObject *Sender, int ACol, int ARow, const UnicodeString Value);
-	void __fastcall BAppendSubjectClick(TObject *Sender);
+    void __fastcall BAppendSubjectClick(TObject *Sender);
     void __fastcall BRemoveSubjectClick(TObject *Sender);
     void __fastcall MenuBExitClick(TObject *Sender);
     void __fastcall GridDrawCell(TObject *Sender, int ACol, int ARow, const TRect &Rect,
                                  TGridDrawState State);
-	void __fastcall N44Click(TObject *Sender);
-	void __fastcall MenuBNewFileClick(TObject *Sender);
-	void __fastcall PagesChange(TObject *Sender);
-	void __fastcall BFunctionHandle1Click(TObject *Sender);
-	void __fastcall BFunctionHandle2Click(TObject *Sender);
+    void __fastcall N44Click(TObject *Sender);
+    void __fastcall MenuBNewFileClick(TObject *Sender);
+    void __fastcall PagesChange(TObject *Sender);
+    void __fastcall BFunctionHandle1Click(TObject *Sender);
+    void __fastcall BFunctionHandle2Click(TObject *Sender);
 
 private:
-    bool Changed;
-	String FileName;
+    //	String FileName;
     TStatusCode StatusCode;
     TErrInfo AdditionErrorInformation;
-	//	TStudentsData StudentData;
-	DynamicArray<TTabSheet *> PageTabs;
-	DynamicArray<DynamicArray<TRect>> BlackList;
-	DynamicArray<String> DirNames; ///FILENAMES
+    //	DynamicArray<TTabSheet *> PageTabs;
+    DynamicArray<DynamicArray<TRect>> BlackList;
+    DynamicArray<String> DirNames; ///FILENAMES
+    DynamicArray<bool> ModifiedFlag;
     TStringGrid *CurTable;
+    String curDirNames;
 
 public: // User declarations
-	__fastcall TMainForm(TComponent *Owner);
-	String getFileName();
+    __fastcall TMainForm(TComponent *Owner);
+    String getFileName();
     void ClearSeries(TChart *Chart);
-	int CallSaveDialog();
-	TStringGrid *getCurrentTable();
+    int CallSaveDialog();
+    //	TStringGrid *getCurrentTable();
     TStatusCode LoadMatrix(const String &FileName, TStringGrid *Table, int *EMemAllocStep = nullptr);
     TStatusCode SaveMatrix(TStringGrid *Table, int *EMemAllocStep = nullptr, String *FileName = nullptr);
     void ErrHandler(const String &FileAdress, TStatusBar *status_bar, TStatusCode status_code, TErrInfo *err = nullptr);
     template <typename TOwner, typename TParent>
     void NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelector,
                               /* const TStringGrid *sourse,*/ const String *config = nullptr);
-    void NewTabInit(TPageControl *pageSelector,
-                    DynamicArray<TTabSheet *> &Tabs, const String *config = nullptr);
+    //	void NewTabInit(TPageControl *pageSelector,
+    //					DynamicArray<TTabSheet *> &Tabs, const String *config = nullptr);
+    void NewTabInit(TPageControl *pageSelector, const String *config = nullptr);
+    void TMainForm::ChangeTabCaption(const String &newName);
 };
 //---------------------------------------------------------------------------
 extern PACKAGE TMainForm *MainForm;

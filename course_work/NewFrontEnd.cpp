@@ -22,7 +22,8 @@ TMainForm *MainForm;
 // ---------------------------------------------------------------------------
 __fastcall TMainForm::TMainForm(TComponent *Owner) : TForm(Owner)
 {
-    NewTabInit(Pages, PageTabs); //DElete PageTabs
+    //	NewTabInit(Pages, PageTabs);   //DElete PageTabs
+    NewTabInit(Pages);
 }
 // ---------------------------------------------------------------------------
 
@@ -110,7 +111,8 @@ void __fastcall TMainForm::MenuBSaveAsClick(TObject *Sender)
 
 void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 {
-    NewTabInit(Pages, PageTabs); //DElete PageTabs
+    //	NewTabInit(Pages, PageTabs);   //DElete PageTabs
+    NewTabInit(Pages);
 }
 // ---------------------------------------------------------------------------
 
@@ -158,24 +160,6 @@ void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow,
 void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow,
                                         const TRect &Rect, TGridDrawState State)
 {
-    // TStringGrid *curTable = (TStringGrid *)Sender;
-    // TRect curRect = curTable->CellRect(ACol, ARow);
-    // #define curBlackList (BlackList[curTable->Tag])
-    ////	DynamicArray<TRect> curBlackList = BlackList[curTable->Tag];
-    // int l = curBlackList.Length;
-    // for (int i = 0; i < curBlackList.Length; i++)
-    // {
-    // if(curRect == curBlackList[i])
-    // {
-    // curTable->Canvas->Brush->Color = clRed;
-    // curTable->Canvas->FillRect(curBlackList[i]);
-    // int TextWidth = curTable->Canvas->TextWidth(curTable->Cells[ACol][ARow]);
-    // curTable->Canvas->TextOut(curBlackList[i].Left + (curBlackList[i].Width() - TextWidth) / 2,
-    // curBlackList[i].Top + (curBlackList[i].Height() - curTable->Canvas->TextHeight(curTable->Cells[ACol][ARow])) / 2,
-    // curTable->Cells[ACol][ARow]);
-    // break;
-    // }
-    // }
     TRect curRect = CurTable->CellRect(ACol, ARow);
     for (int i = 0; i < BlackList[Pages->TabIndex].Length; i++)
     {
@@ -197,24 +181,10 @@ void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow,
 }
 // ---------------------------------------------------------------------------
 
-void TMainForm::NewTabInit(TPageControl *pageSelector,
-                           DynamicArray<TTabSheet *> &Tabs, const String *config) //DElete PageTabs
+//void TMainForm::NewTabInit(TPageControl *pageSelector,
+//						   DynamicArray<TTabSheet *> &Tabs, const String *config)        //DElete PageTabs
+void TMainForm::NewTabInit(TPageControl *pageSelector, const String *config)
 {
-    //	Tabs.Length++;
-    //	Tabs[Tabs.High] = new TTabSheet(pageSelector);
-    //	Tabs[Tabs.High]->PageControl = pageSelector;
-    ////	Tabs[Tabs.High]->Caption = L"Безымянный";
-    //	String Check = Tabs[Tabs.High]->Caption;
-    //	NewStudentsTableInit(Tabs[Tabs.High], Tabs[Tabs.High]);
-    //	BlackList.Length++;
-    ////	Tabs[Tabs.High]->Controls[0]->Tag = BlackList.High;
-    //	DirNames.Length++;
-    //	ModifiedFlag.Length++;
-    //	ModifiedFlag[ModifiedFlag.High] = false;
-    //	Pages->ActivePage = PageTabs[PageTabs.High];
-    //	ChangeTabCaption(L"Безымянный");
-    //	PagesChange(MainForm);
-
     TTabSheet *Tab = new TTabSheet(pageSelector);
     Tab->PageControl = pageSelector;
     NewStudentsTableInit(Tab, Tab);
@@ -252,7 +222,6 @@ void TMainForm::NewStudentsTableInit(TOwner *ownerSelector,
 
 void __fastcall TMainForm::SBStudentCountDownClick(TObject *Sender)
 {
-    // TStringGrid *curTable = getCurrentTable();
     if (CurTable->RowCount > 2)
     {
         EStudentCount->Text = IntToStr(CurTable->RowCount - 2);
@@ -283,14 +252,14 @@ void __fastcall TMainForm::EStudentCountKeyDown(TObject *Sender, WORD &Key,
                 GridManageRow(tmp + 1, CurTable);
                 return;
             }
-            // String S1 = EStudentCount->Text.c_str();    /// ТУТ МОЖЕТ ПОЯВИТЬСЯ ОШИБКА
-            AdditionErrorInformation.InvalidInput =
-                &(String &)(const String &)EStudentCount->Text.c_str();
-            ErrHandler(FileName, StatusBar, StatusCode = EInvalidInput,
+            String S1 = EStudentCount->Text.c_str(); /// ТУТ МОЖЕТ ПОЯВИТЬСЯ ОШИБКА
+            AdditionErrorInformation.InvalidInput = &S1;
+            //				&(String &)(const String &)(EStudentCount->Text.c_str());
+            ErrHandler(L"", StatusBar, StatusCode = EInvalidInput,
                        &AdditionErrorInformation);
         }
         else
-            ErrHandler(FileName, StatusBar, StatusCode = EInvalidInput,
+            ErrHandler(L"", StatusBar, StatusCode = EInvalidInput,
                        &AdditionErrorInformation);
     }
     EStudentCount->SetFocus();
@@ -463,7 +432,7 @@ void __fastcall TMainForm::BAppendSubjectClick(TObject *Sender)
 {
     if ((StatusCode = checkSubjectValue(FSubjectName->Text)) != EGood)
     {
-        ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
+        ErrHandler(L"", StatusBar, StatusCode, &AdditionErrorInformation);
         FSubjectName->SetFocus();
         return;
     }
@@ -476,7 +445,7 @@ void __fastcall TMainForm::BRemoveSubjectClick(TObject *Sender)
 {
     if ((StatusCode = checkSubjectValue(FSubjectName->Text)) != EGood)
     {
-        ErrHandler(FileName, StatusBar, StatusCode, &AdditionErrorInformation);
+        ErrHandler(L"", StatusBar, StatusCode, &AdditionErrorInformation);
         FSubjectName->SetFocus();
         return;
     }
@@ -643,10 +612,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
     {
         file.write((char *)&(const int &)(sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2), sizeof(int));
         file.write((char *)curTable->Cells[1][1 + i].c_str(),
-                   sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 +
-                                                                             i]
-                                                              .Length() +
-                       2);
+                   sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2);
     }
 
     // if (file.fail()) ДОБАВИТЬ К КАЖДОМУ WRITE МОЖЕТ НЕ ХВАТИТЬ ПАМЯТИ
@@ -657,10 +623,7 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
     {
         file.write((char *)&(const int &)(sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2), sizeof(int));
         file.write((char *)curTable->Cells[2 + i][0].c_str(),
-                   sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 +
-                                                                          i][0]
-                                                              .Length() +
-                       2);
+                   sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2);
     }
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
         for (int j = 0; j < subjectCount; j++)
