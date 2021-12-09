@@ -103,44 +103,59 @@ void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 }
 // ---------------------------------------------------------------------------
 
+void __fastcall TMainForm::TableSelectCell(TObject *Sender, int ACol, int ARow, bool &CanSelect)
+
+{
+    //	StatusBar->SimpleText = L"SelectCel " + IntToStr(ACol) + IntToStr(ARow) + L' ';
+    if (!(modifieded = ModifiedFlag[Pages->TabIndex]))
+        curCellsData = CurTable->Cells[ACol][ARow];
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow,
                                            const UnicodeString Value)
 {
-    if (ACol >= 2 && ACol >= 1)
+    if (CurTable->EditorMode)
     {
-        TRect curRect = CurTable->CellRect(ACol, ARow);
-        char Sym = *AnsiString(CurTable->Cells[ACol][ARow]).c_str();
-        if (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '1' && Sym != 'Б' && Sym != 'Н' && Sym != '?')
+        if (ACol >= 2 && ACol >= 1)
         {
-            bool notContrainsRect = true;
-            for (int i = 0;
-                 i < BlackList[Pages->TabIndex].Length && notContrainsRect;
-                 notContrainsRect = (BlackList[Pages->TabIndex][i++] == curRect) ? false : true)
-                ;
-            if (notContrainsRect)
+            //		StatusBar->SimpleText += L"SEDIT " + String(CurTable->EditorMode) + L' ' + Value;
+            TRect curRect = CurTable->CellRect(ACol, ARow);
+            char Sym = *AnsiString(CurTable->Cells[ACol][ARow]).c_str();
+            if (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '1' && Sym != 'Б' && Sym != 'Н' && Sym != '?')
             {
-                BlackList[Pages->TabIndex].Length++;
-                BlackList[Pages->TabIndex][BlackList[Pages->TabIndex].High] =
-                    curRect;
-            }
-        }
-        else // смена цвета клетки на белый
-        {
-            for (int i = 0; i < BlackList[Pages->TabIndex].Length; i++)
-            {
-                if (BlackList[Pages->TabIndex][i] == curRect)
+                bool notContrainsRect = true;
+                for (int i = 0;
+                     i < BlackList[Pages->TabIndex].Length && notContrainsRect;
+                     notContrainsRect = (BlackList[Pages->TabIndex][i++] == curRect) ? false : true)
+                    ;
+                if (notContrainsRect)
                 {
-                    BlackList[Pages->TabIndex][i] =
-                        BlackList[Pages->TabIndex]
-                                 [BlackList[Pages->TabIndex].High];
-                    BlackList[Pages->TabIndex].Length--;
-                    break;
+                    BlackList[Pages->TabIndex].Length++;
+                    BlackList[Pages->TabIndex][BlackList[Pages->TabIndex].High] =
+                        curRect;
+                }
+            }
+            else // смена цвета клетки на белый
+            {
+                for (int i = 0; i < BlackList[Pages->TabIndex].Length; i++)
+                {
+                    if (BlackList[Pages->TabIndex][i] == curRect)
+                    {
+                        BlackList[Pages->TabIndex][i] =
+                            BlackList[Pages->TabIndex]
+                                     [BlackList[Pages->TabIndex].High];
+                        BlackList[Pages->TabIndex].Length--;
+                        break;
+                    }
                 }
             }
         }
+        if (!MenuBSave->Enabled)
+            MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = true;
     }
-    if (!MenuBSave->Enabled)
-        MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = true;
+    if (!modifieded && curCellsData == Value)
+        MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
 }
 // ---------------------------------------------------------------------------
 
@@ -202,6 +217,7 @@ void TMainForm::NewStudentsTableInit(TOwner *ownerSelector,
     createdTable->Cells[2][1] = String(L"<Оценка>");
     createdTable->OnSetEditText = GridSetEditText;
     createdTable->OnDrawCell = GridDrawCell;
+    createdTable->OnSelectCell = TableSelectCell;
 }
 // --------------------------------------------------------------------------
 
@@ -442,6 +458,19 @@ void __fastcall TMainForm::MenuBExitClick(TObject *Sender)
 }
 // ---------------------------------------------------------------------------
 
+unsigned int getFileHash(ifstream &fstr, const std::streamsize &fileSize)
+{
+    char *buffer = new (std::nothrow) char[fileSize];
+    boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
+    fstr.read((char *)buffer, fileSize);
+    crc.process_bytes(buffer, (std::size_t)fileSize);
+    char a = buffer[0], b = buffer[fileSize - 1], c = buffer[fileSize - 2],
+         d = buffer[fileSize - 3], e = buffer[fileSize - 4];
+    delete[] buffer;
+    return crc.checksum();
+}
+// ---------------------------------------------------------------------------
+
 /////////////FILE IN/OUT
 TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
                                   int *EMemAllocStep)
@@ -460,7 +489,7 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
         return EFileIntegrity;
     }
 
-    std::streamsize fileSize, bufferSize;
+    std::streamsize fileSize;
     file.read((char *)&fileSize, sizeof(fileSize));
     {
         std::streamsize realFileSize = boost::filesystem::file_size(AnsiString(FileName).c_str());
@@ -473,32 +502,30 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
 
     unsigned int hash;
     file.read((char *)&hash, sizeof(hash)); // хэш
-                                            //	 if(fileSize > 1036)
-                                            //		bufferSize = 1024;
-                                            //	 else
-    bufferSize = fileSize - 16;
+                                            //	std::streamsize bufferSize = fileSize - 16;
+    file.seekg(16);
+    if (hash != getFileHash(file, fileSize - 16))
     {
-        char *buffer = new (std::nothrow) char[bufferSize];
-        // boost::crc_basic<32> *crc = new(std::nothrow) boost::crc_basic<32>(0x27809EA7, 0u, 0u, true, true);
-        boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
-        file.seekg(16);
-        //		while(!file.eof())
-        //		{
-        file.read((char *)buffer, bufferSize); // buffer_size
-        crc.process_bytes(buffer, (std::size_t)bufferSize);
-        //		}
-        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
-             d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
-        std::streamsize cur = file.tellg();
-        delete[] buffer;
-        unsigned int check = crc.checksum();
-        if (hash != crc.checksum())
-        {
-            file.close();
-            return EFileIntegrity;
-        }
-        // delete crc;
+        file.close();
+        return EFileIntegrity;
     }
+    //	{
+    //		char *buffer = new (std::nothrow) char[bufferSize];
+    //		boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
+    //		file.seekg(16);
+    //		file.read((char *)buffer, bufferSize);
+    //		crc.process_bytes(buffer, (std::size_t)bufferSize);
+    ////        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
+    ////			 d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
+    //		delete[] buffer;
+    //
+    //		if (hash != crc.checksum())
+    //		{
+    //			file.close();
+    //			return EFileIntegrity;
+    //		}
+    //
+    //	}
 
     file.seekg(16);
     int studentCount;
@@ -530,8 +557,11 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
         for (int j = 0, tmp; j < subjectCount; j++)
         {
-            file.read((char *)&tmp, sizeof(tmp));
-            curTable->Cells[2 + j][1 + i] = IntToStr(tmp);
+            //			file.read((char *)&tmp, sizeof(tmp));
+            //			curTable->Cells[2 + j][1 + i] = IntToStr(tmp);
+            char temp;
+            file.read(&temp, sizeof(temp));
+            curTable->Cells[2 + j][1 + i] = String(temp);
         }
     file.close();
     return EGood;
@@ -542,7 +572,6 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
                                   String *FileName)
 {
     std::fstream file;
-    String newFileName;
     if (!FileName)
     {
 
@@ -550,14 +579,13 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
         {
             if (!DSaveDialog->Execute())
                 return ECancel;
-            ///Было EGood
 
-            newFileName = DSaveDialog->FileName;
-            file.open(AnsiString(newFileName).c_str(), std::ios_base::in);
+            //			newFileName = DSaveDialog->FileName;
+            file.open(AnsiString(DSaveDialog->FileName).c_str(), std::ios_base::in);
             if (file.is_open())
             {
                 int chose =
-                    Application->MessageBox((SliceAdressToFileName(newFileName) +
+                    Application->MessageBox((SliceAdressToFileName(DSaveDialog->FileName) +
                                              L" уже существует\r\nЗаменить?")
                                                 .w_str(),
                                             L"Подтвердить сохранение", MB_YESNOCANCEL);
@@ -569,7 +597,9 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
             }
             break;
         }
-        FileName = &newFileName;
+        //		*FileName = &(String &)(const String &)(String() = (DSaveDialog->FileName.c_str())); CПРОСИТЬ КАК ТАКОЕ РЕАЛИЗОВЫВАТЬ
+        FileName = &(String &)(const String &)(String());
+        *FileName = DSaveDialog->FileName;
     }
 
     file.open(AnsiString(*FileName).c_str(),
@@ -602,44 +632,36 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
     }
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
         for (int j = 0; j < subjectCount; j++)
-            file.write((char *)&(const int &)StrToInt(curTable->Cells[j + 2][i + 1]), sizeof(int));
+            //			file.write((char *)&(const int &)StrToInt(curTable->Cells[j + 2][i + 1]), sizeof(int));
+            file.write((char *)AnsiString(curTable->Cells[j + 2][i + 1].c_str()).c_str(), sizeof(char)); // V2
     file.close();
 
-    file.open(AnsiString(*FileName).c_str(), std::ios_base::in);
-    std::streamsize fileSize, bufferSize;
-    file.seekg(0, ios::end);
-    fileSize = file.tellg();
+    file.open(AnsiString(*FileName).c_str(), std::ios_base::in | std::ios_base::binary);
+    std::streamsize fileSize = boost::filesystem::file_size(AnsiString(*FileName).c_str());
+    file.seekg(16);
+    unsigned int hash = getFileHash((ifstream &)file, fileSize - 16);
+    //	std::streamsize fileSize, bufferSize;
+    //	file.seekg(0, ios::end);
+    //	fileSize = file.tellg();
 
-    boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
-    {
-        //		if(fileSize > 1036)
-        //			bufferSize = 1024;
-        //		else
-        bufferSize = fileSize - 16;
-
-        //		char buffer[bufferSize];
-        char *buffer = new (std::nothrow) char[bufferSize];
-        file.seekg(16, std::ios_base::beg);
-        //		 while(!file.eof())
-        //		{
-        file.read((char *)buffer, bufferSize);
-        crc.process_bytes(buffer, (std::size_t)bufferSize);
-        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
-             d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
-        //		}
-        delete[] buffer;
-        // DEBUG
-        std::streamsize cur = file.tellg();
-        file.seekg(-1, std::ios_base::cur);
-        cur = file.tellg();
-        int i = cur;
-    }
+    //	boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
+    //	{
+    //		std::streamsize bufferSize = fileSize - 16;
+    //
+    //		char *buffer = new (std::nothrow) char[bufferSize];
+    //		file.seekg(16, std::ios_base::beg);
+    //		file.read((char *)buffer, bufferSize);
+    //		String tt = String(buffer);
+    //		crc.process_bytes(buffer, (std::size_t)bufferSize);
+    ////		char a = buffer[0], b = buffer[bufferSize - 16], c = buffer[bufferSize - 17],
+    ////			 d = buffer[bufferSize - 18], e = buffer[bufferSize - 19], f = buffer[bufferSize - 20];
+    //		delete[] buffer;
+    //	}
     file.close();
-    // delete[] buffer;
 
     file.open(AnsiString(*FileName).c_str(),
               std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    unsigned int hash = crc.checksum();
+    //	unsigned int hash = crc.checksum();
     file.seekp(4);
     file.write((char *)&fileSize, sizeof(std::streamsize));
     file.write((char *)&hash, sizeof(hash));
@@ -740,7 +762,8 @@ void __fastcall TMainForm::MenuBNewFileClick(TObject *Sender)
 
 int TMainForm::CallSaveDialog()
 {
-    if ((DFileOpen->FileName = String(), getFileName()) != String())
+    DFileOpen->FileName = getFileName(), String();
+    if (DFileOpen->FileName != String())
     {
         return Application->MessageBox((String(L"Сохранить изменения в файле \"") + DFileOpen->FileName + L"\"?")
                                            .w_str(),
@@ -756,8 +779,6 @@ int TMainForm::CallSaveDialog()
 
 void __fastcall TMainForm::PagesChange(TObject *Sender)
 {
-    // ДОБАВИТЬ СОБЫТИЕ СМЕНЫ ЧЕГО-ТО ВСЕГО НА ТЕКУЩЕЕ, ПОДУМАТЬ НАД
-    // ОБЪЕДИНЕНИЕМ ДАННЫХ В СТРУКТУРУ ДЛЯ КАЖДОГО СОЗДАННОГО ОБЪЕКТА ТАБА И ТАБЛИЧКИ
     StatusBar->SimpleText = IntToStr(Pages->TabIndex);
     CurTable = (TStringGrid *)Pages->ActivePage->Controls[0];
     MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex];
@@ -822,3 +843,19 @@ void TMainForm::ChangeTabCaption(const String &newName)
                                       : CBStudentGroup->Items->Count,
                                   SliceFileNameToFileTitle(Pages->ActivePage->Caption));
 }
+// --------------------------------------------------------------------------
+
+void __fastcall TMainForm::FormClose(TObject *Sender, TCloseAction &Action)
+{
+    for (int i = Pages->PageCount; i--;)
+    {
+        Pages->ActivePage = (TTabSheet *)Pages->Controls[i];
+        MenuBCloseWindowClick(Sender);
+        if (ModifiedFlag.Length == i + 1 && ModifiedFlag[i])
+        {
+            Action = caNone;
+            return;
+        }
+    }
+}
+//---------------------------------------------------------------------------
