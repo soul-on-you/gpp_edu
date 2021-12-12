@@ -7,9 +7,12 @@
 #include <boost/filesystem.hpp>
 #include <boost/crc.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/pointer_cast.hpp>
 #include <fstream>
 #include <cstring> ///для substr
 #include "FrontEnd.h"
+#include <winuser.h>
 // ---------------------------------------------------------------------------
 #pragma package(smart_init)
 #pragma link "perfgrap"
@@ -22,6 +25,7 @@ TMainForm *MainForm;
 __fastcall TMainForm::TMainForm(TComponent *Owner) : TForm(Owner)
 {
     NewTabInit(Pages);
+    fixedChanges = false;
 }
 // ---------------------------------------------------------------------------
 
@@ -57,6 +61,8 @@ void __fastcall TMainForm::MenuBOpenFileClick(TObject *Sender)
             ErrHandler(DFileOpen->FileName, StatusBar, StatusCode,
                        &AdditionErrorInformation);
     }
+    if (MenuChBAutoWidth->Checked)
+        SetMaxSize(CurTable);
 }
 // ---------------------------------------------------------------------------
 
@@ -103,12 +109,123 @@ void __fastcall TMainForm::MenuBOpenWindowClick(TObject *Sender)
 }
 // ---------------------------------------------------------------------------
 
+void __fastcall TMainForm::TableFixedCellClick(TObject *Sender, int ACol, int ARow)
+
+{
+    if (KeyboardStateToShiftState() != TShiftState() << ssCtrl << ssLeft)
+    {
+        if (ACol)
+            return; ///Доп.Соритовка, Если нужна будет
+        else if (ARow)
+            return; ///Доп.Соритовка, Если нужна будет
+        else
+        {
+            CurTable->Rows[CurTable->Row]->Objects[0] = (TObject *)true;
+//#define BOOST_SCOPE_PTR_SORT
+#ifdef BOOST_SCOPE_PTR_SORT
+            boost::scoped_ptr<TStringList> SList(new TStringList);
+            for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
+            {
+                boost::scoped_ptr<TStringList> SRow(new TStringList);
+                SRow->Assign(CurTable->Rows[i]);
+                SList->AddObject(CurTable->Cells[ACol][i], (TStringList *)(SRow.get())); // boost::static_pointer_cast<TStringList*>(SRow));
+            }
+            SList->Sort();
+            if ((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+                for (int i = 0; i < SList->Count; i++)
+                    CurTable->Rows[i + CurTable->FixedRows]->Assign((TStringList *)(SList->Objects[i]));
+            else
+                for (int i = 0; i < SList->Count; i++)
+                    CurTable->Rows[i + CurTable->FixedRows]->Assign((TStringList *)(SList->Objects[SList->Count - i - 1]));
+#else
+            TStringList *SRow, *SList = new TStringList;
+            for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
+            {
+                SRow = new TStringList;
+                SRow->Assign(CurTable->Rows[i]);
+                SList->AddObject(CurTable->Cells[ACol][i], SRow);
+            }
+            SList->Sort();
+            if ((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+                for (int i = 0; i < SList->Count; i++)
+                {
+                    SRow = (TStringList *)(SList->Objects[i]);
+                    CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
+                    delete SRow;
+                }
+            else
+                for (int i = 0; i < SList->Count; i++)
+                {
+                    SRow = (TStringList *)(SList->Objects[SList->Count - i - 1]);
+                    CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
+                    delete SRow;
+                }
+            delete SList;
+#endif
+            for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
+                if (CurTable->Rows[i]->Objects[0])
+                {
+                    CurTable->Rows[i]->Objects[0] = (TObject *)false;
+                    CurTable->Row = i;
+                    break;
+                }
+        }
+    }
+    else
+    {
+        if (ACol >= CurTable->FixedCols)
+        {
+            CurTable->FixedRows = 0;
+            CurTable->Row = 0;
+            CurTable->Col = ACol;
+        }
+        else if (ARow >= CurTable->FixedRows)
+        {
+            CurTable->FixedCols = 0;
+            CurTable->Col = 0;
+            CurTable->Row = ARow;
+        }
+        else
+            return;
+        CurTable->Options = CurTable->Options << goEditing;
+        CurTable->EditorMode = true;
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::TableGetEditText(TObject *Sender, int ACol, int ARow, UnicodeString &Value)
+
+{
+    if (!(modifieded = ModifiedFlag[Pages->TabIndex]))
+        curCellsData = CurTable->Cells[ACol][ARow];
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TMainForm::TableSelectCell(TObject *Sender, int ACol, int ARow, bool &CanSelect)
 
 {
     //	StatusBar->SimpleText = L"SelectCel " + IntToStr(ACol) + IntToStr(ARow) + L' ';
-    if (!(modifieded = ModifiedFlag[Pages->TabIndex]))
-        curCellsData = CurTable->Cells[ACol][ARow];
+    if (ACol >= 1 && ARow >= 1)
+    {
+        CurTable->FixedRows = 1;
+        CurTable->FixedCols = 1;
+        if (!(modifieded = ModifiedFlag[Pages->TabIndex]) &&
+            (SaveCol != CurTable->Col && SaveRow != CurTable->Row))
+            curCellsData = CurTable->Cells[ACol][ARow];
+        if (!CurTable->EditorMode)
+        {
+            CurTable->Options = CurTable->Options >> goEditing;
+        }
+        else
+        {
+            if (!modifieded && MenuBSave->Enabled)
+            {
+                SaveCol = CurTable->Col;
+                SaveRow = CurTable->Row;
+            }
+        }
+        CurTable->SetFocus();
+    }
 }
 //---------------------------------------------------------------------------
 
@@ -117,12 +234,14 @@ void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow,
 {
     if (CurTable->EditorMode)
     {
-        if (ACol >= 2 && ACol >= 1)
+        // if (ACol >= 2 && ACol >= 1)
+        if (ARow >= 1 && ACol >= 1)
         {
             //		StatusBar->SimpleText += L"SEDIT " + String(CurTable->EditorMode) + L' ' + Value;
             TRect curRect = CurTable->CellRect(ACol, ARow);
             char Sym = *AnsiString(CurTable->Cells[ACol][ARow]).c_str();
-            if (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '1' && Sym != 'Б' && Sym != 'Н' && Sym != '?')
+            int length = CurTable->Cells[ACol][ARow].Length();
+            if (length > 1 || (Sym != '5' && Sym != '4' && Sym != '3' && Sym != '2' && Sym != '0' && Sym != 'Б' && Sym != 'Н' && Sym != '?'))
             {
                 bool notContrainsRect = true;
                 for (int i = 0;
@@ -153,11 +272,102 @@ void __fastcall TMainForm::GridSetEditText(TObject *Sender, int ACol, int ARow,
         }
         if (!MenuBSave->Enabled)
             MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = true;
+        if (!modifieded && curCellsData == Value)
+            MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
     }
-    if (!modifieded && curCellsData == Value)
-        MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
+    else
+    {
+        if (ARow && ACol)
+        {
+            if (!modifieded && curCellsData == Value)
+                MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
+            //		CurTable->EditorMode = true;
+            TableKeyPress(Sender, (WideChar &)(const WideChar &)VK_RETURN);
+        }
+        else
+        {
+            CurTable->FixedRows = 1;
+            CurTable->FixedCols = 1;
+            CurTable->Col = ACol ? ACol : 1;
+            CurTable->Row = ARow ? ARow : 1;
+        }
+    }
 }
 // ---------------------------------------------------------------------------
+
+void __fastcall TMainForm::TableDblClick(TObject *Sender)
+{
+    if (CurTable->Col && CurTable->Row)
+    {
+        TPoint curPos;
+        GetCursorPos(&curPos);
+        curPos = CurTable->ScreenToClient(curPos);
+
+        if (GetCursor() == Screen->Cursors[crHSplit])
+        {
+            TGridCoord gc = CurTable->MouseCoord(curPos.X - 4, curPos.Y);
+            if (CurTable->ColWidths[gc.X] > 8)
+                CurTable->ColWidths[gc.X] = 8;
+            else
+                SetMaxSize(CurTable, gc.X);
+        }
+        else
+        {
+            TGridCoord gc = CurTable->MouseCoord(curPos.X, curPos.Y);
+            if (gc.X >= CurTable->FixedCols && gc.Y >= CurTable->FixedRows)
+            {
+                CurTable->Options = CurTable->Options << goEditing;
+                CurTable->EditorMode = !CurTable->EditorMode;
+                CurTable->SetFocus();
+            }
+            else
+                TableFixedCellClick(Sender, gc.X, gc.Y);
+        }
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::TableExit(TObject *Sender)
+{
+    CurTable->Options = CurTable->Options >> goEditing;
+    fixedChanges = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::TableKeyPress(TObject *Sender, System::WideChar &Key)
+{
+    if (CurTable->Col && CurTable->Row)
+    {
+        if (Key == VK_RETURN && !fixedChanges)
+        {
+            if (CurTable->EditorMode)
+            {
+                CurTable->Options = CurTable->Options >> goEditing;
+                if (!modifieded && MenuBSave->Enabled)
+                {
+                    SaveCol = CurTable->Col;
+                    SaveRow = CurTable->Row;
+                }
+            }
+            else
+            {
+                if ((SaveCol != CurTable->Col && SaveRow != CurTable->Row) &&
+                    !(modifieded = ModifiedFlag[Pages->TabIndex]))
+                    curCellsData = CurTable->Cells[CurTable->Col][CurTable->Row];
+                CurTable->Options << goEditing;
+                CurTable->SetFocus();
+            }
+        }
+    }
+    if (Key == VK_ESCAPE && CurTable->EditorMode)
+    {
+        CurTable->Cells[CurTable->Col][CurTable->Row] = curCellsData;
+        CurTable->EditorMode = false;
+        CurTable->Options = CurTable->Options >> goEditing;
+        MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex] = false;
+    }
+}
+//---------------------------------------------------------------------------
 
 void __fastcall TMainForm::GridDrawCell(TObject *Sender, int ACol, int ARow,
                                         const TRect &Rect, TGridDrawState State)
@@ -191,7 +401,9 @@ void TMainForm::NewTabInit(TPageControl *pageSelector, const String *config)
     BlackList.Length++;
     DirNames.Length++;
     ModifiedFlag.Length++;
+    SortMode.Length++;
     ModifiedFlag[ModifiedFlag.High] = false;
+    SortMode[SortMode.High] = false;
     Pages->ActivePage = Tab;
     ChangeTabCaption(L"Безымянный");
     PagesChange(MainForm);
@@ -203,21 +415,31 @@ void TMainForm::NewStudentsTableInit(TOwner *ownerSelector,
                                      TParent *parentSelector, const String *config)
 {
     TStringGrid *createdTable = new TStringGrid(ownerSelector);
-    createdTable->Options << goRowSizing << goColSizing << goRowMoving << goColMoving << goEditing << goTabs << goFixedColClick << goFixedRowClick << goFixedHotTrack << goFixedColDefAlign;
+    createdTable->Options << goRowSizing << goColSizing << goRowMoving << goColMoving /*<< goEditing */ << goTabs << goFixedColClick << goFixedRowClick << goFixedHotTrack << goFixedColDefAlign;
     createdTable->Parent = parentSelector;
     createdTable->Align = alClient;
     createdTable->DefaultColAlignment = taCenter;
     createdTable->RowCount = 2;
-    createdTable->ColCount = 3;
-    createdTable->Cells[0][0] = String(L"№");
-    createdTable->Cells[0][1] = String(L"1");
-    createdTable->Cells[1][0] = String(L"Студент");
-    createdTable->Cells[1][1] = String(L"<ФИО>");
-    createdTable->Cells[2][0] = String(L"Предмет");
-    createdTable->Cells[2][1] = String(L"<Оценка>");
+    createdTable->ColCount = 2;
+    //    createdTable->ColCount = 3;
+    //    createdTable->Cells[0][0] = String(L"№");              /////////////////!!!!!!!!!!!!!
+    //    createdTable->Cells[0][1] = String(L"1");
+    //	createdTable->Cells[1][0] = String(L"Студент");
+    //	createdTable->Cells[1][1] = String(L"<ФИО>");
+    //	createdTable->Cells[2][0] = String(L"Предмет");
+    //	createdTable->Cells[2][1] = String(L"<Оценка>");
+    createdTable->Cells[0][0] = String(L"Студент");
+    createdTable->Cells[0][1] = String(L"<ФИО>");
+    createdTable->Cells[1][0] = String(L"Предмет");
+    createdTable->Cells[1][1] = String(L"<Оценка>");
     createdTable->OnSetEditText = GridSetEditText;
     createdTable->OnDrawCell = GridDrawCell;
     createdTable->OnSelectCell = TableSelectCell;
+    createdTable->OnExit = TableExit;
+    createdTable->OnDblClick = TableDblClick;
+    createdTable->OnKeyPress = TableKeyPress;
+    createdTable->OnFixedCellClick = TableFixedCellClick;
+    createdTable->OnGetEditText = TableGetEditText;
 }
 // --------------------------------------------------------------------------
 
@@ -509,23 +731,6 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
         file.close();
         return EFileIntegrity;
     }
-    //	{
-    //		char *buffer = new (std::nothrow) char[bufferSize];
-    //		boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
-    //		file.seekg(16);
-    //		file.read((char *)buffer, bufferSize);
-    //		crc.process_bytes(buffer, (std::size_t)bufferSize);
-    ////        char a = buffer[0], b = buffer[bufferSize - 1], c = buffer[bufferSize - 2],
-    ////			 d = buffer[bufferSize - 3], e = buffer[bufferSize - 4];
-    //		delete[] buffer;
-    //
-    //		if (hash != crc.checksum())
-    //		{
-    //			file.close();
-    //			return EFileIntegrity;
-    //		}
-    //
-    //	}
 
     file.seekg(16);
     int studentCount;
@@ -536,22 +741,28 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
     {
         file.read((char *)&curStrSize, sizeof(curStrSize));
 
-        curTable->Cells[1][1 + i] = String();
-        file.read((char *)curTable->Cells[1][1 + i].c_str(), curStrSize);
-        curTable->Cells[1][1 + i] = curTable->Cells[1][1 + i].c_str();
-        curTable->Cells[0][i + 1] = IntToStr(i + 1);
+        //		curTable->Cells[1][1 + i] = String();
+        //		file.read((char *)curTable->Cells[1][1 + i].c_str(), curStrSize);
+        //		curTable->Cells[1][1 + i] = curTable->Cells[1][1 + i].c_str();
+        //        curTable->Cells[0][i + 1] = IntToStr(i + 1);            /////////////////
+        curTable->Cells[0][1 + i] = String();
+        file.read((char *)curTable->Cells[0][1 + i].c_str(), curStrSize);
+        curTable->Cells[0][1 + i] = curTable->Cells[0][1 + i].c_str();
     }
 
     int subjectCount;
     file.read((char *)&subjectCount, sizeof(subjectCount));
     // кол-во предметов и карта названий предметов
-    curTable->ColCount = subjectCount + 2;
+    curTable->ColCount = subjectCount + 1;
     for (int i = 0, curStrSize; i < subjectCount; i++)
     {
         file.read((char *)&curStrSize, sizeof(curStrSize));
-        curTable->Cells[2 + i][0] = String();
-        file.read((char *)curTable->Cells[2 + i][0].c_str(), curStrSize);
-        curTable->Cells[2 + i][0] = curTable->Cells[2 + i][0].c_str();
+        //		curTable->Cells[2 + i][0] = String();
+        //		file.read((char *)curTable->Cells[2 + i][0].c_str(), curStrSize);
+        //		curTable->Cells[2 + i][0] = curTable->Cells[2 + i][0].c_str();
+        curTable->Cells[1 + i][0] = String();
+        file.read((char *)curTable->Cells[1 + i][0].c_str(), curStrSize);
+        curTable->Cells[1 + i][0] = curTable->Cells[1 + i][0].c_str();
     }
 
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
@@ -561,7 +772,8 @@ TStatusCode TMainForm::LoadMatrix(const String &FileName, TStringGrid *curTable,
             //			curTable->Cells[2 + j][1 + i] = IntToStr(tmp);
             char temp;
             file.read(&temp, sizeof(temp));
-            curTable->Cells[2 + j][1 + i] = String(temp);
+            //			curTable->Cells[2 + j][1 + i] = String(temp);
+            curTable->Cells[1 + j][1 + i] = String(temp);
         }
     file.close();
     return EGood;
@@ -615,48 +827,40 @@ TStatusCode TMainForm::SaveMatrix(TStringGrid *curTable, int *EMemAllocStep,
     file.write((char *)&studentCount, sizeof(studentCount));
     for (int i = 0; i < studentCount; i++)
     {
-        file.write((char *)&(const int &)(sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2), sizeof(int));
-        file.write((char *)curTable->Cells[1][1 + i].c_str(),
-                   sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2);
+        //		file.write((char *)&(const int &)(sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2), sizeof(int));
+        //		file.write((char *)curTable->Cells[1][1 + i].c_str(),
+        //				   sizeof(curTable->Cells[1][1 + i][1]) * curTable->Cells[1][1 + i].Length() + 2);
+        file.write((char *)&(const int &)(sizeof(curTable->Cells[0][1 + i][1]) * curTable->Cells[0][1 + i].Length() + 2), sizeof(int));
+        file.write((char *)curTable->Cells[0][1 + i].c_str(),
+                   sizeof(curTable->Cells[0][1 + i][1]) * curTable->Cells[0][1 + i].Length() + 2);
     }
 
     // if (file.fail()) ДОБАВИТЬ К КАЖДОМУ WRITE МОЖЕТ НЕ ХВАТИТЬ ПАМЯТИ
-    int subjectCount = curTable->ColCount - 2;
+    int subjectCount = curTable->ColCount - 1;
+    //    int subjectCount = curTable->ColCount - 2;
     // кол-во предметов и карта названий предметов
     file.write((char *)&subjectCount, sizeof(subjectCount));
     for (int i = 0; i < subjectCount; i++)
     {
-        file.write((char *)&(const int &)(sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2), sizeof(int));
-        file.write((char *)curTable->Cells[2 + i][0].c_str(),
-                   sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2);
+        //		file.write((char *)&(const int &)(sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2), sizeof(int));
+        //		file.write((char *)curTable->Cells[2 + i][0].c_str(),
+        //				   sizeof(curTable->Cells[2 + i][0][1]) * curTable->Cells[2 + i][0].Length() + 2);
+        file.write((char *)&(const int &)(sizeof(curTable->Cells[1 + i][0][1]) * curTable->Cells[1 + i][0].Length() + 2), sizeof(int));
+        file.write((char *)curTable->Cells[1 + i][0].c_str(),
+                   sizeof(curTable->Cells[1 + i][0][1]) * curTable->Cells[1 + i][0].Length() + 2);
     }
     for (int i = 0; i < studentCount; i++) // оценки по [студенту] по [предмету]
         for (int j = 0; j < subjectCount; j++)
             //			file.write((char *)&(const int &)StrToInt(curTable->Cells[j + 2][i + 1]), sizeof(int));
-            file.write((char *)AnsiString(curTable->Cells[j + 2][i + 1].c_str()).c_str(), sizeof(char)); // V2
+            //			file.write((char *)AnsiString(curTable->Cells[j + 2][i + 1].c_str()).c_str(), sizeof(char)); // V2
+            file.write((char *)AnsiString(curTable->Cells[j + 1][i + 1].c_str()).c_str(), sizeof(char)); // V2
     file.close();
 
     file.open(AnsiString(*FileName).c_str(), std::ios_base::in | std::ios_base::binary);
     std::streamsize fileSize = boost::filesystem::file_size(AnsiString(*FileName).c_str());
     file.seekg(16);
     unsigned int hash = getFileHash((ifstream &)file, fileSize - 16);
-    //	std::streamsize fileSize, bufferSize;
-    //	file.seekg(0, ios::end);
-    //	fileSize = file.tellg();
 
-    //	boost::crc_basic<32> crc(0x27809EA7, 0u, 0u, true, true);
-    //	{
-    //		std::streamsize bufferSize = fileSize - 16;
-    //
-    //		char *buffer = new (std::nothrow) char[bufferSize];
-    //		file.seekg(16, std::ios_base::beg);
-    //		file.read((char *)buffer, bufferSize);
-    //		String tt = String(buffer);
-    //		crc.process_bytes(buffer, (std::size_t)bufferSize);
-    ////		char a = buffer[0], b = buffer[bufferSize - 16], c = buffer[bufferSize - 17],
-    ////			 d = buffer[bufferSize - 18], e = buffer[bufferSize - 19], f = buffer[bufferSize - 20];
-    //		delete[] buffer;
-    //	}
     file.close();
 
     file.open(AnsiString(*FileName).c_str(),
@@ -731,15 +935,59 @@ void TMainForm::ErrHandler(const String &FileAdress, TStatusBar *status_bar,
 }
 // --------------------------------------------------------------------------
 
-void __fastcall TMainForm::N44Click(TObject *Sender)
+void __fastcall TMainForm::MenuBFontChangeClick(TObject *Sender)
 {
-    if (FontDialog->Execute())
-        for (int i = 0; i < Pages->PageCount; i++)
+    //    if (FontDialog->Execute())
+    //        for (int i = 0; i < Pages->PageCount; i++)
+    //        {
+    //            // Pages->Controls[i]->Controls[0]->Font = FontDialog->Font;
+    //        }
+    FontDialog->Tag = 0;
+    FontDialog->Font->Assign(CurTable->Font);
+    TFont *srcFont = new TFont;
+
+    try
+    {
+        srcFont->Assign(CurTable->Font);
+        if (!FontDialog->Execute())
         {
-            // Pages->Controls[i]->Controls[0]->Font = FontDialog->Font;
+            if (FontDialog->Tag)
+            {
+                CurTable->Font->Assign(srcFont);
+                CurTable->Repaint();
+                /// if(autosize)    AutoSizeGrid(CurTable);
+                //				SetMaxSize(CurTable);//////////////////////////
+                if (MenuChBAutoWidth->Checked)
+                    SetMaxSize(CurTable);
+            }
+            return;
         }
+    }
+    __finally
+    {
+        delete srcFont;
+    }
+
+    CurTable->Font->Assign(FontDialog->Font);
+    CurTable->Repaint();
+    /// if(autosize)    AutoSizeGrid(CurTable);  ////////////////////////////
+    //	SetMaxSize(CurTable);
+    if (MenuChBAutoWidth->Checked)
+        SetMaxSize(CurTable);
 }
 // ---------------------------------------------------------------------------
+
+void __fastcall TMainForm::FontDialogApply(TObject *Sender, HWND Wnd)
+{
+    FontDialog->Tag = 1;
+    CurTable->Font->Assign(FontDialog->Font);
+    CurTable->Repaint();
+    /// if(autosize)    AutoSizeGrid(CurTable);  //////////////////////////////
+    //	SetMaxSize(CurTable);
+    if (MenuChBAutoWidth->Checked)
+        SetMaxSize(CurTable);
+}
+//---------------------------------------------------------------------------
 
 void __fastcall TMainForm::MenuBNewFileClick(TObject *Sender)
 {
@@ -782,22 +1030,26 @@ void __fastcall TMainForm::PagesChange(TObject *Sender)
     StatusBar->SimpleText = IntToStr(Pages->TabIndex);
     CurTable = (TStringGrid *)Pages->ActivePage->Controls[0];
     MenuBSave->Enabled = ModifiedFlag[Pages->TabIndex];
+    CurTable->Font->Assign(FontDialog->Font);
+    CurTable->Repaint();
+    if (MenuChBAutoWidth->Checked)
+        SetMaxSize(CurTable);
+    fixedChanges = false;
 }
 // ---------------------------------------------------------------------------
 
 void __fastcall TMainForm::BFunctionHandle1Click(TObject *Sender)
 {
     TStringGrid *curGrid = CurTable;
-    ClearSeries(Chart1);
+    ClearSeries(Chart);
     for (int Col = 2; Col < curGrid->ColCount; Col++) // тут кол-во графиков
     {
-        TLineSeries *Series = new TLineSeries(Chart1);
-        Chart1->AddSeries(Series);
+        TLineSeries *Series = new TLineSeries(Chart);
+        Chart->AddSeries(Series);
         for (int Row = 1; Row < curGrid->RowCount;
              Row++) // длинна созданного графика
         {
-            Series[0].AddXY(curGrid->Cells[0][Row].ToDouble(),
-                            // установка точек
+            Series[0].AddXY(curGrid->Cells[0][Row].ToDouble(), // установка точек
                             curGrid->Cells[Col][Row].ToDouble());
         }
     }
@@ -806,22 +1058,29 @@ void __fastcall TMainForm::BFunctionHandle1Click(TObject *Sender)
 
 void __fastcall TMainForm::BFunctionHandle2Click(TObject *Sender)
 {
-    Chart1->View3DOptions->Orthogonal = false;
-    Chart1->View3DOptions->Perspective = 0;
-    Chart1->View3DOptions->Zoom = 100;
-    Chart1->View3DOptions->Elevation = 360;
-    Chart1->View3DOptions->Rotation = 360;
-    ClearSeries(Chart1);
-    TBarSeries *Series = new TBarSeries(Chart1);
-    Chart1->AddSeries(Series);
+    Chart->View3DOptions->Orthogonal = false;
+    Chart->View3DOptions->Perspective = 0;
+    Chart->View3DOptions->Zoom = 100;
+    Chart->View3DOptions->Elevation = 360;
+    Chart->View3DOptions->Rotation = 360;
+    ClearSeries(Chart);
+    TBarSeries *Series = new TBarSeries(Chart);
+    Chart->AddSeries(Series);
     TStringGrid *curGrid = CurTable;
-    for (int Col = 2; Col < curGrid->ColCount; Col++)
+    for (int Col = 2, validMark = curGrid->RowCount - 1; Col < curGrid->ColCount; Col++)
     {
         int Sum = 0;
         for (int Row = 1; Row < curGrid->RowCount; Row++)
+        {
+            char Sym = *AnsiString(CurTable->Cells[Col][Row]).c_str();
+            if ((Sym == 'Б' || Sym == 'Н' || Sym == '?') && validMark--)
+                continue;
             Sum += StrToInt(curGrid->Cells[Col][Row]);
-        Series->Add(Sum / 1.0 / curGrid->RowCount, curGrid->Cells[Col][0],
-                    (TColor)clTeeColor);
+        }
+        if (validMark)
+            Series->Add(Sum / 1.0 / validMark, curGrid->Cells[Col][0],
+                        (TColor)clTeeColor);
+        validMark = curGrid->RowCount - 1;
     }
 }
 // ---------------------------------------------------------------------------
@@ -856,6 +1115,175 @@ void __fastcall TMainForm::FormClose(TObject *Sender, TCloseAction &Action)
             Action = caNone;
             return;
         }
+    }
+}
+//---------------------------------------------------------------------------
+void __fastcall TMainForm::PChartManageResize(TObject *Sender)
+{
+    CBStudentGroup->Width = (PChartManage->Width - BExpandChartToggle->Width) / 2;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BExpandChartToggleClick(TObject *Sender)
+{
+    if (RightBox->Width == 24)
+        RightBox->Width += TableBox->Width - 4;
+    else
+        RightBox->Width = 24;
+    //	GetMaxColWidth(nullptr, 1);
+}
+//---------------------------------------------------------------------------
+
+int getOptimalColWidth(TStringGrid *Table, int Col)
+{
+    //	try{
+    int optimal = 0;
+    for (int i = 0; i < Table->RowCount; i++)
+        optimal = Table->Canvas->TextWidth(Table->Cells[Col][i]) > optimal ? Table->Canvas->TextWidth(Table->Cells[Col][i]) : optimal;
+    return optimal;
+    //	}
+    //	catch(Exception &E)
+    //	{
+    //		ShowMessage("Read nullptr"+E.Message);
+    //	}
+}
+//---------------------------------------------------------------------------
+
+void SetMaxSize(TStringGrid *Table, int Col)
+{
+    if (Col < Table->ColCount)
+    {
+        if (Col >= 0)
+            Table->ColWidths[Col] = getOptimalColWidth(Table, Col) + 12;
+        else
+            for (int i = 0; i < Table->ColCount; i++)
+                Table->ColWidths[i] = getOptimalColWidth(Table, i) + 12;
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::MenuChBAutoWidthClick(TObject *Sender)
+{
+    MenuChBAutoWidth->Checked = !MenuChBAutoWidth->Checked;
+    if (MenuChBAutoWidth->Checked)
+        SetMaxSize(CurTable);
+}
+//---------------------------------------------------------------------------
+
+class TStringGridExtra : TStringGrid
+{
+public:
+    using TStringGrid::DeleteColumn;
+    using TStringGrid::DeleteRow;
+    using TStringGrid::InvalidateCell;
+    using TStringGrid::MoveColumn;
+    using TStringGrid::MoveRow;
+    //	std::auto_ptr<TStringList> L (new TStringList);
+};
+
+void __fastcall TMainForm::BSortClick(TObject *Sender /* , int Col*/)
+{
+#ifdef BOOST_SCOPE_PTR_SORT
+    int Col = 0;
+    boost::scoped_ptr<TStringList> SList(new TStringList);
+    for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
+    {
+        boost::scoped_ptr<TStringList> SRow(new TStringList);
+        SRow->Assign(CurTable->Rows[i]);
+        SList->AddObject(CurTable->Cells[Col][i], (TStringList *)(SRow.get())); // boost::static_pointer_cast<TStringList*>(SRow));
+    }
+    SList->Sort();
+    if ((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+        for (int i = 0; i < SList->Count; i++)
+            CurTable->Rows[i + CurTable->FixedRows]->Assign((TStringList *)(SList->Objects[i]));
+    else
+        for (int i = 0; i < SList->Count; i++)
+            CurTable->Rows[i + CurTable->FixedRows]->Assign((TStringList *)(SList->Objects[SList->Count - i - 1]));
+
+#else
+    int Col = 0;
+    TStringList *SRow, *SList = new TStringList;
+    for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
+    {
+        SRow = new TStringList;
+        SRow->Assign(CurTable->Rows[i]);
+        SList->AddObject(CurTable->Cells[Col][i], SRow);
+    }
+    SList->Sort();
+    if ((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+        for (int i = 0; i < SList->Count; i++)
+        {
+            SRow = (TStringList *)(SList->Objects[i]);
+            CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
+            delete SRow;
+        }
+    else
+        for (int i = 0; i < SList->Count; i++)
+        {
+            SRow = (TStringList *)(SList->Objects[SList->Count - i - 1]);
+            CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
+            delete SRow;
+        }
+    delete SList;
+#endif
+
+    //	delete SList;
+    //		SList->Add(CurTable->Rows[i]->CommaText);   V1
+    //	SList->Sort();
+    //	if((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+    //		for(int i = 0; i < SList->Count; i++)
+    //			CurTable->Rows[i + CurTable->FixedRows]->CommaText = SList->Strings[i];
+    //	else
+    //		for(int i = 0; i < SList->Count;)
+    //			CurTable->Rows[i + CurTable->FixedRows]->CommaText = SList->Strings[SList->Count - ++i];
+    //	delete SList;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BInsertStudentClick(TObject *Sender)
+{
+    CurTable->RowCount++;
+    ((TStringGridExtra *)CurTable)->MoveRow(CurTable->RowCount - 1, CurTable->Row);
+    CurTable->Row--;
+    CurTable->Rows[CurTable->Row]->Clear();
+    MenuBSave->Enabled /*= modified */ = ModifiedFlag[Pages->TabIndex] = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BAddStudentClick(TObject *Sender)
+{
+    CurTable->RowCount++;
+    CurTable->Row = CurTable->RowCount - 1;
+    CurTable->Rows[CurTable->Row]->Clear();
+    CurTable->SetFocus();
+    MenuBSave->Enabled /*= modified */ = ModifiedFlag[Pages->TabIndex] = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BDeleteStudentClick(TObject *Sender)
+{
+    int DelCount;
+    if ((DelCount = CurTable->Selection.Bottom - CurTable->Selection.Top + 1) == 1)
+    {
+        if (Application->MessageBox((String(L"Вы действительно хотите удалить студента \"") + CurTable->Cells[0][CurTable->Row] + L"\"?").w_str(),
+                                    Application->Title.w_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != ID_YES)
+            return;
+    }
+    else
+    {
+        if (Application->MessageBox((String(L"Вы действительно хотите удалить студентов с \"") + CurTable->Cells[0][CurTable->Selection.Top] + L"\" по \"" + CurTable->Cells[1][CurTable->Selection.Bottom] + L"\"?").w_str(),
+                                    Application->Title.w_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != ID_YES)
+            return;
+    }
+    if (CurTable->RowCount - DelCount >= 1)
+    {
+        int t = CurTable->Selection.Top, b = CurTable->Selection.Bottom;
+        if (CurTable->RowCount - DelCount == 1)
+            BAddStudentClick(Sender);
+        for (int i = t; i <= b; i++)
+            ((TStringGridExtra *)CurTable)->DeleteRow(t);
+        if (t < CurTable->RowCount)
+            CurTable->Row = t;
     }
 }
 //---------------------------------------------------------------------------
