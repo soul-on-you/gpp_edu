@@ -170,6 +170,13 @@ class TMainForm : public TForm
     void __fastcall BDeleteStudentClick(TObject *Sender);
     void __fastcall TableFixedCellClick(TObject *Sender, int ACol, int ARow);
     void __fastcall TableGetEditText(TObject *Sender, int ACol, int ARow, UnicodeString &Value);
+    void __fastcall BInsertSubjectClick(TObject *Sender);
+    void __fastcall BAddSubjectClick(TObject *Sender);
+    void __fastcall BDeleteSubjectClick(TObject *Sender);
+    void __fastcall Splitter2Moved(TObject *Sender);
+    void __fastcall Splitter2CanResize(TObject *Sender, int &NewSize, bool &Accept);
+    void __fastcall CBChartModeSelect(TObject *Sender);
+    void __fastcall CBStudentGroupSelect(TObject *Sender);
 
 private:
     TStatusCode StatusCode;
@@ -183,8 +190,7 @@ private:
     bool fixedChanges;
     int SaveCol;
     int SaveRow;
-    DynamicArray<bool> SortMode;
-    //	TFont* GridFont;
+    DynamicArray<int> SortMode;
 
 public: // User declarations
     __fastcall TMainForm(TComponent *Owner);
@@ -197,10 +203,10 @@ public: // User declarations
     template <typename TOwner, typename TParent>
     void NewStudentsTableInit(TOwner *ownerSelector, TParent *parentSelector,
                               /* const TStringGrid *sourse,*/ const String *config = nullptr);
-    //	void NewTabInit(TPageControl *pageSelector,
-    //					DynamicArray<TTabSheet *> &Tabs, const String *config = nullptr);
     void NewTabInit(TPageControl *pageSelector, const String *config = nullptr);
     void ChangeTabCaption(const String &newName);
+    void renderChart();
+    bool checkBlackListEmpty(int pageID);
 };
 //---------------------------------------------------------------------------
 extern PACKAGE TMainForm *MainForm;

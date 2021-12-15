@@ -120,6 +120,13 @@ void __fastcall TMainForm::TableFixedCellClick(TObject *Sender, int ACol, int AR
             return; ///Доп.Соритовка, Если нужна будет
         else
         {
+            if (SortMode[Pages->TabIndex])
+            {
+                CurTable->Cells[ACol][ARow] = CurTable->Cells[ACol][ARow]
+                                                  .SubString(1, CurTable->Cells[ACol][ARow].Length() - 2);
+                if (MenuChBAutoWidth->Checked)
+                    SetMaxSize(CurTable, ACol);
+            }
             CurTable->Rows[CurTable->Row]->Objects[0] = (TObject *)true;
 //#define BOOST_SCOPE_PTR_SORT
 #ifdef BOOST_SCOPE_PTR_SORT
@@ -146,20 +153,31 @@ void __fastcall TMainForm::TableFixedCellClick(TObject *Sender, int ACol, int AR
                 SList->AddObject(CurTable->Cells[ACol][i], SRow);
             }
             SList->Sort();
-            if ((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+            //			if((SortMode[Pages->TabIndex] = !SortMode[Pages->TabIndex]))
+            if (SortMode[Pages->TabIndex] > 0)
+            {
+                SortMode[Pages->TabIndex] = -ACol - 1;
                 for (int i = 0; i < SList->Count; i++)
                 {
                     SRow = (TStringList *)(SList->Objects[i]);
                     CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
                     delete SRow;
                 }
+                CurTable->Cells[ACol][ARow] = CurTable->Cells[ACol][ARow] + L" \x25bc";
+            }
             else
+            {
+                SortMode[Pages->TabIndex] = ACol + 1;
                 for (int i = 0; i < SList->Count; i++)
                 {
                     SRow = (TStringList *)(SList->Objects[SList->Count - i - 1]);
                     CurTable->Rows[i + CurTable->FixedRows]->Assign(SRow);
                     delete SRow;
                 }
+                CurTable->Cells[ACol][ARow] = CurTable->Cells[ACol][ARow] + L" \x25b2";
+            }
+            if (MenuChBAutoWidth->Checked)
+                SetMaxSize(CurTable, ACol);
             delete SList;
 #endif
             for (int i = CurTable->FixedRows; i < CurTable->RowCount; i++)
@@ -403,7 +421,7 @@ void TMainForm::NewTabInit(TPageControl *pageSelector, const String *config)
     ModifiedFlag.Length++;
     SortMode.Length++;
     ModifiedFlag[ModifiedFlag.High] = false;
-    SortMode[SortMode.High] = false;
+    SortMode[SortMode.High] = 0;
     Pages->ActivePage = Tab;
     ChangeTabCaption(L"Безымянный");
     PagesChange(MainForm);
@@ -1127,10 +1145,17 @@ void __fastcall TMainForm::PChartManageResize(TObject *Sender)
 void __fastcall TMainForm::BExpandChartToggleClick(TObject *Sender)
 {
     if (RightBox->Width == 24)
+    {
         RightBox->Width += TableBox->Width - 4;
+        BExpandChartToggle->Caption = L"\u25B8";
+        Chart->Visible = true;
+    }
     else
+    {
         RightBox->Width = 24;
-    //	GetMaxColWidth(nullptr, 1);
+        BExpandChartToggle->Caption = L"\u25C2";
+        Chart->Visible = false;
+    }
 }
 //---------------------------------------------------------------------------
 
@@ -1178,7 +1203,6 @@ public:
     using TStringGrid::InvalidateCell;
     using TStringGrid::MoveColumn;
     using TStringGrid::MoveRow;
-    //	std::auto_ptr<TStringList> L (new TStringList);
 };
 
 void __fastcall TMainForm::BSortClick(TObject *Sender /* , int Col*/)
@@ -1250,11 +1274,31 @@ void __fastcall TMainForm::BInsertStudentClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
+void __fastcall TMainForm::BInsertSubjectClick(TObject *Sender)
+{
+    CurTable->ColCount++;
+    ((TStringGridExtra *)CurTable)->MoveColumn(CurTable->ColCount - 1, CurTable->Col);
+    CurTable->Col--;
+    CurTable->Cols[CurTable->Col]->Clear();
+    MenuBSave->Enabled /*= modified */ = ModifiedFlag[Pages->TabIndex] = true;
+}
+//---------------------------------------------------------------------------
+
 void __fastcall TMainForm::BAddStudentClick(TObject *Sender)
 {
     CurTable->RowCount++;
     CurTable->Row = CurTable->RowCount - 1;
     CurTable->Rows[CurTable->Row]->Clear();
+    CurTable->SetFocus();
+    MenuBSave->Enabled /*= modified */ = ModifiedFlag[Pages->TabIndex] = true;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BAddSubjectClick(TObject *Sender)
+{
+    CurTable->ColCount++;
+    CurTable->Col = CurTable->ColCount - 1;
+    CurTable->Cols[CurTable->Col]->Clear();
     CurTable->SetFocus();
     MenuBSave->Enabled /*= modified */ = ModifiedFlag[Pages->TabIndex] = true;
 }
@@ -1271,7 +1315,7 @@ void __fastcall TMainForm::BDeleteStudentClick(TObject *Sender)
     }
     else
     {
-        if (Application->MessageBox((String(L"Вы действительно хотите удалить студентов с \"") + CurTable->Cells[0][CurTable->Selection.Top] + L"\" по \"" + CurTable->Cells[1][CurTable->Selection.Bottom] + L"\"?").w_str(),
+        if (Application->MessageBox((String(L"Вы действительно хотите удалить студентов с \"") + CurTable->Cells[0][CurTable->Selection.Top] + L"\" по \"" + CurTable->Cells[0][CurTable->Selection.Bottom] + L"\"?").w_str(),
                                     Application->Title.w_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != ID_YES)
             return;
     }
@@ -1287,3 +1331,121 @@ void __fastcall TMainForm::BDeleteStudentClick(TObject *Sender)
     }
 }
 //---------------------------------------------------------------------------
+
+void __fastcall TMainForm::BDeleteSubjectClick(TObject *Sender)
+{
+    int DelCount;
+    if ((DelCount = CurTable->Selection.Right - CurTable->Selection.Left + 1) == 1)
+    {
+        if (Application->MessageBox((String(L"Вы действительно хотите удалить предмет \"") + CurTable->Cells[CurTable->Col][0] + L"\"?").w_str(),
+                                    Application->Title.w_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != ID_YES)
+            return;
+    }
+    else
+    {
+        if (Application->MessageBox((String(L"Вы действительно хотите удалить предметы с \"") + CurTable->Cells[CurTable->Selection.Left][0] + L"\" по \"" + CurTable->Cells[CurTable->Selection.Right][0] + L"\"?").w_str(),
+                                    Application->Title.w_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != ID_YES)
+            return;
+    }
+    if (CurTable->ColCount - DelCount >= 1)
+    {
+        int l = CurTable->Selection.Left, r = CurTable->Selection.Right;
+        if (CurTable->ColCount - DelCount == 1)
+            BAddSubjectClick(Sender);
+        for (int i = l; i <= r; i++)
+            ((TStringGridExtra *)CurTable)->DeleteColumn(l);
+        if (l < CurTable->ColCount)
+            CurTable->Col = l;
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::Splitter2Moved(TObject *Sender)
+{
+    if (Splitter2->Tag != RightBox->Width)
+    {
+        BExpandChartToggle->Caption = L"\u25B8";
+        Chart->Visible = true;
+    }
+    //	StatusBar->SimpleText = Chart->Width;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::Splitter2CanResize(TObject *Sender, int &NewSize, bool &Accept)
+
+{
+    //	StatusBar->SimpleText = Chart->Width;
+    Splitter2->Tag = RightBox->Width;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::CBChartModeSelect(TObject *Sender)
+{
+    if (CBStudentGroup->ItemIndex > -1)
+        renderChart();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::CBStudentGroupSelect(TObject *Sender)
+{
+    if (CBChartMode->ItemIndex > -1)
+        renderChart();
+}
+//---------------------------------------------------------------------------
+
+void TMainForm::renderChart()
+{
+    TStringGrid *curGrid = (TStringGrid *)(((TTabSheet *)(Pages->Controls[CBStudentGroup->ItemIndex]))->Controls[0]);
+    if (!checkBlackListEmpty(CBStudentGroup->ItemIndex))
+        return;
+
+    switch (CBChartMode->ItemIndex)
+    {
+    case 0:
+        ClearSeries(Chart);
+        for (int Col = 2; Col < curGrid->ColCount; Col++) // тут кол-во графиков
+        {
+            TLineSeries *Series = new TLineSeries(Chart);
+            Chart->AddSeries(Series);
+            for (int Row = 1; Row < curGrid->RowCount;
+                 Row++) // длинна созданного графика
+            {
+                Series[0].AddXY(Row, // установка точек
+                                curGrid->Cells[Col][Row].ToDouble());
+            }
+        }
+        break;
+    case 1:
+        Chart->View3DOptions->Orthogonal = false;
+        Chart->View3DOptions->Perspective = 0;
+        Chart->View3DOptions->Zoom = 100;
+        Chart->View3DOptions->Elevation = 360;
+        Chart->View3DOptions->Rotation = 360;
+        ClearSeries(Chart);
+        TBarSeries *Series = new TBarSeries(Chart);
+        Chart->AddSeries(Series);
+        for (int Col = 2, validMark = curGrid->RowCount - 1; Col < curGrid->ColCount; Col++)
+        {
+            int Sum = 0;
+            for (int Row = 1; Row < curGrid->RowCount; Row++)
+            {
+                char Sym = *AnsiString(CurTable->Cells[Col][Row]).c_str();
+                if ((Sym == 'Б' || Sym == 'Н' || Sym == '?') && validMark--)
+                    continue;
+                Sum += StrToInt(curGrid->Cells[Col][Row]);
+            }
+            if (validMark)
+                Series->Add(Sum / 1.0 / validMark, curGrid->Cells[Col][0],
+                            (TColor)clTeeColor);
+            validMark = curGrid->RowCount - 1;
+        }
+        break;
+    }
+}
+
+bool TMainForm::checkBlackListEmpty(int pageID)
+{
+    if (BlackList[pageID].Length == 0)
+        return true;
+    return false;
+}
